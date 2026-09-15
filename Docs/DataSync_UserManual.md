@@ -72,14 +72,14 @@ The files are bound to the machine's CPU. If they were created for another machi
 
 - **Login**: sign in with a user from the local database. With *Remember me* checked, the next start logs in
   automatically.
-- **Real-Time Data Task**: copies new remote rows as they appear. It shows the last copied record and its time.
-- **Sync Old Data Task**: back-fills older records missing locally, newest first. *Pause/Resume Sync Task* stops
+- **Real-time data**: copies new remote rows as they appear. It shows the last copied record and its time.
+- **Historical data**: back-fills older records missing locally, newest first. *Pause/Resume sync task* stops
   and restarts it. The real-time task keeps running.
-- **Details** tab: the record ranges and their state. *Syncing* rows are yellow, the *RealTime* row is green.
-- **Messages** tab: recent events and errors, newest first. *Open Log Folder* opens the folder with the full log
+- **Sync table** tab: the record ranges and their state. *Syncing* rows are yellow, the *Real-time* row is green.
+- **Messages** tab: recent events and errors, newest first. *Open log folder* opens the folder with the full log
   files (see [Logs and troubleshooting](#logs-and-troubleshooting)).
-- **Test Remote / Local Connection**: checks a database connection.
-- **Clear Local Data**: asks for the daily password, stops replication, empties the local run-time tables and
+- **Test remote / local connection**: checks a database connection.
+- **Clear local data**: asks for the daily password, stops replication, empties the local run-time tables and
   restarts.
 - **Settings** (top-right of the header): edits the rig name, replication tuning and logging settings below. The
   values are checked, saved to `DataSync.exe.config` and applied after a restart, which DataSync offers to do.
@@ -125,7 +125,7 @@ The files are bound to the machine's CPU. If they were created for another machi
 ## Logs and troubleshooting
 
 DataSync writes log files to the `logs` folder next to `DataSync.exe` (`LogPathDir`), one file per day by default,
-named like `DataSync-20260915.log`. Click *Open Log Folder* on the **Messages** tab to find them, and send the files
+named like `DataSync-20260915.log`. Click *Open log folder* on the **Messages** tab to find them, and send the files
 covering the problem.
 
 At the default level (`Information`) the log contains:

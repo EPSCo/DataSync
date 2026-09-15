@@ -3,7 +3,7 @@ using DataSync.Infrastructure;
 namespace DataSync.ViewModels
 {
     /// <summary>
-    /// One row of the Details grid. Rows are updated in place so the grid keeps its scroll position.
+    /// One row of the Sync Table grid. Rows are updated in place so the grid keeps its scroll position.
     /// </summary>
     public sealed class SyncRangeRow : ObservableObject
     {

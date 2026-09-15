@@ -19,12 +19,12 @@
         <Border Background="{StaticResource HeaderBrush}" Padding="14,7">
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Current Time" Foreground="{StaticResource HeaderMutedTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Text="Current time" Foreground="{StaticResource HeaderMutedTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
                     <TextBlock Text="{Binding CurrentTime}" Foreground="White" FontFamily="Consolas" FontSize="14" VerticalAlignment="Center" />
                     <Button Content="Settings" Command="{Binding SettingsCommand}" Style="{StaticResource HeaderButton}" Margin="14,0,0,0" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Rig Name" Foreground="{StaticResource HeaderMutedTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
+                    <TextBlock Text="Rig name" Foreground="{StaticResource HeaderMutedTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
                     <TextBlock Text="{Binding RigName}" Foreground="White" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
             </DockPanel>
@@ -47,7 +47,7 @@
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="Real-Time Data Task" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Real-time data" Style="{StaticResource SectionTitle}" />
                         <Grid Margin="0,4,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="110" />
@@ -63,9 +63,9 @@
                             <TextBlock Grid.Column="1" Text="{Binding RealTimeState}" Style="{StaticResource StateValue}" />
                             <TextBlock Grid.Row="3" Text="Batch" Style="{StaticResource FieldLabel}" ToolTip="Rows per remote read and recent copy rate" />
                             <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding RealTimeBatch}" Style="{StaticResource FieldValue}" />
-                            <TextBlock Grid.Row="1" Text="Last Record" Style="{StaticResource FieldLabel}" />
+                            <TextBlock Grid.Row="1" Text="Current record" Style="{StaticResource FieldLabel}" />
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LastBaseId}" Style="{StaticResource FieldValue}" />
-                            <TextBlock Grid.Row="2" Text="Last Record Time" Style="{StaticResource FieldLabel}" />
+                            <TextBlock Grid.Row="2" Text="Current record time" Style="{StaticResource FieldLabel}" />
                             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LastRecordTime}" Style="{StaticResource FieldValue}" />
                         </Grid>
                     </StackPanel>
@@ -73,7 +73,7 @@
 
                 <Border Grid.Row="2" Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="Sync Old Data Task" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Historical data" Style="{StaticResource SectionTitle}" />
                         <Grid Margin="0,4,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="110" />
@@ -86,7 +86,7 @@
                             </Grid.RowDefinitions>
                             <TextBlock Text="Status" Style="{StaticResource FieldLabel}" />
                             <TextBlock Grid.Column="1" Text="{Binding SyncState}" Style="{StaticResource StateValue}" />
-                            <TextBlock Grid.Row="1" Text="Next Record" Style="{StaticResource FieldLabel}" />
+                            <TextBlock Grid.Row="1" Text="Current record" Style="{StaticResource FieldLabel}" />
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SyncNextBaseId}" Style="{StaticResource FieldValue}" />
                             <TextBlock Grid.Row="2" Text="Batch" Style="{StaticResource FieldLabel}" ToolTip="BaseIDs per remote read and recent copy rate" />
                             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SyncBatch}" Style="{StaticResource FieldValue}" />
@@ -99,9 +99,9 @@
                 <StackPanel>
                     <TextBlock Text="Actions" Style="{StaticResource SectionTitle}" Margin="0,0,0,8" />
                     <Button Content="{Binding SyncButtonText}" Command="{Binding ToggleSyncCommand}" Style="{StaticResource PrimaryButton}" Margin="0,0,0,5" />
-                    <Button Content="Test Remote Connection" Command="{Binding TestRemoteConnectionCommand}" Margin="0,0,0,5" />
-                    <Button Content="Test Local Connection" Command="{Binding TestLocalConnectionCommand}" Margin="0,0,0,5" />
-                    <Button Content="Clear Local Data" Command="{Binding ClearLocalDataCommand}" Style="{StaticResource DangerButton}" Margin="0,0,0,8" />
+                    <Button Content="Test remote connection" Command="{Binding TestRemoteConnectionCommand}" Margin="0,0,0,5" />
+                    <Button Content="Test local connection" Command="{Binding TestLocalConnectionCommand}" Margin="0,0,0,5" />
+                    <Button Content="Clear local data" Command="{Binding ClearLocalDataCommand}" Style="{StaticResource DangerButton}" Margin="0,0,0,8" />
                     <UniformGrid Columns="2">
                         <Button Content="Restart" Command="{Binding RestartCommand}" Margin="0,0,3,0" />
                         <Button Content="Close" Click="CloseButton_Click" Margin="3,0,0,0" />
@@ -112,7 +112,7 @@
 
         <!-- Ranges and messages -->
         <TabControl Grid.Row="2" Margin="10" Padding="0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}">
-            <TabItem Header="Details" Padding="10,3">
+            <TabItem Header="Sync table" Padding="10,3">
                 <DataGrid ItemsSource="{Binding Ranges}" BorderThickness="0">
                     <DataGrid.RowStyle>
                         <Style TargetType="DataGridRow">
@@ -120,16 +120,16 @@
                                 <DataTrigger Binding="{Binding Status}" Value="Syncing">
                                     <Setter Property="Background" Value="{StaticResource SyncingRowBrush}" />
                                 </DataTrigger>
-                                <DataTrigger Binding="{Binding Status}" Value="RealTime">
+                                <DataTrigger Binding="{Binding Status}" Value="Real-time">
                                     <Setter Property="Background" Value="{StaticResource RealTimeRowBrush}" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </DataGrid.RowStyle>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Begin Record" Binding="{Binding BaseIdBegin}" Width="*" ElementStyle="{StaticResource CellText}" />
-                        <DataGridTextColumn Header="End Record" Binding="{Binding BaseIdEnd}" Width="*" ElementStyle="{StaticResource CellText}" />
-                        <DataGridTextColumn Header="Sync Starting Record" Binding="{Binding StartSyncPoint}" Width="*" ElementStyle="{StaticResource CellText}" />
+                        <DataGridTextColumn Header="Begin record" Binding="{Binding BaseIdBegin}" Width="*" ElementStyle="{StaticResource CellText}" />
+                        <DataGridTextColumn Header="End record" Binding="{Binding BaseIdEnd}" Width="*" ElementStyle="{StaticResource CellText}" />
+                        <DataGridTextColumn Header="Sync starting record" Binding="{Binding StartSyncPoint}" Width="*" ElementStyle="{StaticResource CellText}" />
                         <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*" ElementStyle="{StaticResource CellText}" />
                     </DataGrid.Columns>
                 </DataGrid>
@@ -139,8 +139,8 @@
                 <DockPanel>
                     <Border DockPanel.Dock="Top" Padding="6" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
                         <StackPanel Orientation="Horizontal">
-                            <Button Content="Clear Messages" Command="{Binding ClearMessagesCommand}" />
-                            <Button Content="Open Log Folder" Command="{Binding OpenLogFolderCommand}" Margin="6,0,0,0"
+                            <Button Content="Clear messages" Command="{Binding ClearMessagesCommand}" />
+                            <Button Content="Open log folder" Command="{Binding OpenLogFolderCommand}" Margin="6,0,0,0"
                                     ToolTip="Opens the folder with the full log files, e.g. to send them for troubleshooting" />
                         </StackPanel>
                     </Border>

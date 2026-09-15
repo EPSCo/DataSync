@@ -46,7 +46,7 @@ namespace DataSync.ViewModels
         private string _lastRecordTime;
         private string _syncState;
         private string _syncNextBaseId = "-";
-        private string _syncButtonText = "Pause Sync Task";
+        private string _syncButtonText = "Pause sync task";
         private string _realTimeBatch = "-";
         private string _syncBatch = "-";
         private long _realTimeRowsCopied;
@@ -198,7 +198,7 @@ namespace DataSync.ViewModels
             catch (Exception ex)
             {
                 Log.Error(ex, "Cannot start replication");
-                _shell.ShowError("Cannot start replication: " + ex.Message, "Replication Error");
+                _shell.ShowError("Cannot start replication: " + ex.Message, "Replication error");
                 return;
             }
 
@@ -262,7 +262,7 @@ namespace DataSync.ViewModels
             UpdateBatchInfo(status);
 
             // Downloading or NoOldData (waiting to check for new gaps) both mean the sync task is running.
-            SyncButtonText = status.SyncState == TaskState.Stop ? "Resume Sync Task" : "Pause Sync Task";
+            SyncButtonText = status.SyncState == TaskState.Stop ? "Resume sync task" : "Pause sync task";
 
             UpdateRanges(status);
         }
@@ -363,7 +363,21 @@ namespace DataSync.ViewModels
                 row.BaseIdBegin = range.Range.BaseIdBegin;
                 row.BaseIdEnd = isRealTime ? realTimeEnd : range.Range.BaseIdEnd;
                 row.StartSyncPoint = !isRealTime && range.StartSyncPoint > 0 ? range.StartSyncPoint.ToString() : "-";
-                row.Status = range.Status.ToString();
+                row.Status = DescribeStatus(range.Status);
+            }
+        }
+
+        /// <summary>Status text for the Sync Table; the row colours in MainWindow.xaml match on these words.</summary>
+        private static string DescribeStatus(RangeStatus status)
+        {
+            switch (status)
+            {
+                case RangeStatus.RealTime:
+                    return "Real-time";
+                case RangeStatus.NotSync:
+                    return "Queued";
+                default:
+                    return status.ToString();
             }
         }
 
@@ -412,11 +426,11 @@ namespace DataSync.ViewModels
             {
                 if (await Task.Run(() => DatabaseConfig.Instance.CheckConnection(kind)))
                 {
-                    _shell.ShowInfo("Connection to the " + name + " database is successful.", kind + " Database Connection");
+                    _shell.ShowInfo("Connection to the " + name + " database is successful.", kind + " database connection");
                 }
                 else
                 {
-                    _shell.ShowError("Failed to connect to the " + name + " database.", kind + " Database Connection Error");
+                    _shell.ShowError("Failed to connect to the " + name + " database.", kind + " database connection error");
                 }
             }
             finally

@@ -33,13 +33,13 @@ namespace DataSync.Infrastructure
             report(35, "Verifying hardware lock...");
             if (!await Task.Run(() => config.VerifyHardwareLock()))
             {
-                return Fail("Hardware lock verification failed.", "Hardware Lock");
+                return Fail("Hardware lock verification failed.", "Hardware lock");
             }
 
             report(60, "Connecting to local database...");
             if (!await Task.Run(() => config.CheckConnection(ConnectionKind.Local)))
             {
-                return Fail("Failed to connect to the local database.", "Local Database Connection Error");
+                return Fail("Failed to connect to the local database.", "Local database connection error");
             }
 
             report(85, "Connecting to remote database...");
