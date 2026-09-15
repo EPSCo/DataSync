@@ -16,11 +16,14 @@ namespace DataSync.Core.Data
         private static readonly ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>> PropertyMaps =
             new ConcurrentDictionary<Type, Dictionary<string, PropertyInfo>>();
 
-        public static List<T> QueryProcedure<T>(string connectionString, string procedure, params SqlParameter[] parameters)
+        /// <summary>SqlCommand's own default, in seconds.</summary>
+        public const int DefaultCommandTimeout = 30;
+
+        public static List<T> QueryProcedure<T>(string connectionString, int commandTimeout, string procedure, params SqlParameter[] parameters)
             where T : new()
         {
             using (var connection = new SqlConnection(connectionString))
-            using (var command = CreateProcedure(connection, procedure, parameters))
+            using (var command = CreateProcedure(connection, commandTimeout, procedure, parameters))
             {
                 connection.Open();
                 using (var reader = command.ExecuteReader())
@@ -30,19 +33,19 @@ namespace DataSync.Core.Data
             }
         }
 
-        public static void ExecuteProcedure(string connectionString, string procedure, params SqlParameter[] parameters)
+        public static void ExecuteProcedure(string connectionString, int commandTimeout, string procedure, params SqlParameter[] parameters)
         {
             using (var connection = new SqlConnection(connectionString))
-            using (var command = CreateProcedure(connection, procedure, parameters))
+            using (var command = CreateProcedure(connection, commandTimeout, procedure, parameters))
             {
                 connection.Open();
                 command.ExecuteNonQuery();
             }
         }
 
-        public static void ExecuteText(SqlConnection connection, SqlTransaction transaction, string sql)
+        public static void ExecuteText(SqlConnection connection, SqlTransaction transaction, int commandTimeout, string sql)
         {
-            using (var command = new SqlCommand(sql, connection, transaction))
+            using (var command = new SqlCommand(sql, connection, transaction) { CommandTimeout = commandTimeout })
             {
                 command.ExecuteNonQuery();
             }
@@ -53,9 +56,9 @@ namespace DataSync.Core.Data
             return type.GetProperties(BindingFlags.Public | BindingFlags.Instance);
         }
 
-        private static SqlCommand CreateProcedure(SqlConnection connection, string procedure, SqlParameter[] parameters)
+        private static SqlCommand CreateProcedure(SqlConnection connection, int commandTimeout, string procedure, SqlParameter[] parameters)
         {
-            var command = new SqlCommand(procedure, connection) { CommandType = CommandType.StoredProcedure };
+            var command = new SqlCommand(procedure, connection) { CommandType = CommandType.StoredProcedure, CommandTimeout = commandTimeout };
             if (parameters != null)
             {
                 command.Parameters.AddRange(parameters);

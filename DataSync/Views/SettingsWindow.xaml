@@ -71,14 +71,19 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="7" Text="Latest data first" Style="{StaticResource FieldLabel}"
+                                       ToolTip="When real-time falls behind, copy the newest rows first and back-fill the skipped rows newest first; history waits while real-time is behind or failing. Off: catch up oldest-first" />
+                            <CheckBox Grid.Row="7" Grid.Column="1" IsChecked="{Binding PrioritizeLatestData}" />
 
                             <TextBlock Grid.Row="0" Text="Real-time interval (s)" Style="{StaticResource FieldLabel}"
                                        ToolTip="Seconds between real-time reads once caught up" />
                             <TextBox Grid.Row="0" Grid.Column="1"                                     Text="{Binding RealTimeUpdateInterval, UpdateSourceTrigger=PropertyChanged}" />
 
                             <TextBlock Grid.Row="1" Text="Real-time row limit" Style="{StaticResource FieldLabel}"
-                                       ToolTip="Maximum rows per real-time read" />
+                                       ToolTip="Maximum rows per real-time read (every read when adaptive batch size is off)" />
                             <TextBox Grid.Row="1" Grid.Column="1"                                     Text="{Binding RealTimeRowLimit, UpdateSourceTrigger=PropertyChanged}" />
 
                             <TextBlock Grid.Row="2" Text="Sync pause (s)" Style="{StaticResource FieldLabel}"
@@ -86,7 +91,7 @@
                             <TextBox Grid.Row="2" Grid.Column="1"                                     Text="{Binding SyncUpdateInterval, UpdateSourceTrigger=PropertyChanged}" />
 
                             <TextBlock Grid.Row="3" Text="Sync row limit" Style="{StaticResource FieldLabel}"
-                                       ToolTip="Maximum rows per sync batch" />
+                                       ToolTip="Maximum rows per sync batch (every batch when adaptive batch size is off)" />
                             <TextBox Grid.Row="3" Grid.Column="1"                                     Text="{Binding SyncRowLimit, UpdateSourceTrigger=PropertyChanged}" />
 
                             <TextBlock Grid.Row="4" Text="Gap check interval (min)" Style="{StaticResource FieldLabel}"
@@ -105,8 +110,45 @@
                 </Border>
             </StackPanel>
 
-            <!-- Right: logging -->
-            <Border Grid.Column="2" Style="{StaticResource Card}" VerticalAlignment="Top">
+            <!-- Right: network and logging -->
+            <StackPanel Grid.Column="2">
+            <Border Style="{StaticResource Card}">
+                <StackPanel>
+                    <TextBlock Text="Network" Style="{StaticResource SectionTitle}" Margin="0,0,0,4" />
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="150" />
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                        </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="0" Text="Adaptive batch size" Style="{StaticResource FieldLabel}"
+                                   ToolTip="Size each read from recent read times, up to the row limits. Off: always read the row limits" />
+                        <CheckBox Grid.Row="0" Grid.Column="1" x:Name="AdaptiveCheckBox" IsChecked="{Binding AdaptiveBatchSize}" />
+
+                        <TextBlock Grid.Row="1" Text="Minimum row limit" Style="{StaticResource FieldLabel}"
+                                   ToolTip="Smallest adaptive read size; also the size of the first read" />
+                        <TextBox Grid.Row="1" Grid.Column="1" IsEnabled="{Binding IsChecked, ElementName=AdaptiveCheckBox}"
+                                 Text="{Binding MinRowLimit, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="2" Text="Target read time (s)" Style="{StaticResource FieldLabel}"
+                                   ToolTip="Seconds one remote read should take when adaptive" />
+                        <TextBox Grid.Row="2" Grid.Column="1" IsEnabled="{Binding IsChecked, ElementName=AdaptiveCheckBox}"
+                                 Text="{Binding TargetBatchSeconds, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="3" Text="Command timeout (s)" Style="{StaticResource FieldLabel}"
+                                   ToolTip="Seconds before a database read or save is abandoned as timed out" />
+                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding CommandTimeout, UpdateSourceTrigger=PropertyChanged}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource Card}" Margin="0,10,0,0">
                 <StackPanel>
                     <TextBlock Text="Logging" Style="{StaticResource SectionTitle}" Margin="0,0,0,4" />
                     <Grid>
@@ -120,7 +162,14 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
+
+                        <TextBlock Grid.Row="5" Text="Log level" Style="{StaticResource FieldLabel}"
+                                   ToolTip="Least important messages written. Debug also logs every remote read, for troubleshooting a network; it writes much more" />
+                        <ComboBox Grid.Row="5" Grid.Column="1"
+                                  ItemsSource="{x:Static config:EditableSettings.LogLevelNames}"
+                                  SelectedItem="{Binding LogLevel}" />
 
                         <TextBlock Grid.Row="0" Text="Log directory" Style="{StaticResource FieldLabel}"
                                    ToolTip="Relative to the application folder unless a full path is given" />
@@ -144,6 +193,7 @@
                     </Grid>
                 </StackPanel>
             </Border>
+            </StackPanel>
         </Grid>
 
         <TextBlock x:Name="ErrorText" Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap" Margin="0,10,0,0" Visibility="Collapsed" />

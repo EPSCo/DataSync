@@ -57,9 +57,12 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <TextBlock Text="Status" Style="{StaticResource FieldLabel}" />
                             <TextBlock Grid.Column="1" Text="{Binding RealTimeState}" Style="{StaticResource StateValue}" />
+                            <TextBlock Grid.Row="3" Text="Batch" Style="{StaticResource FieldLabel}" ToolTip="Rows per remote read and recent copy rate" />
+                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding RealTimeBatch}" Style="{StaticResource FieldValue}" />
                             <TextBlock Grid.Row="1" Text="Last Record" Style="{StaticResource FieldLabel}" />
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LastBaseId}" Style="{StaticResource FieldValue}" />
                             <TextBlock Grid.Row="2" Text="Last Record Time" Style="{StaticResource FieldLabel}" />
@@ -79,11 +82,14 @@
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
                             <TextBlock Text="Status" Style="{StaticResource FieldLabel}" />
                             <TextBlock Grid.Column="1" Text="{Binding SyncState}" Style="{StaticResource StateValue}" />
                             <TextBlock Grid.Row="1" Text="Next Record" Style="{StaticResource FieldLabel}" />
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SyncNextBaseId}" Style="{StaticResource FieldValue}" />
+                            <TextBlock Grid.Row="2" Text="Batch" Style="{StaticResource FieldLabel}" ToolTip="BaseIDs per remote read and recent copy rate" />
+                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SyncBatch}" Style="{StaticResource FieldValue}" />
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -132,7 +138,11 @@
             <TabItem Header="Messages" Padding="10,3">
                 <DockPanel>
                     <Border DockPanel.Dock="Top" Padding="6" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
-                        <Button Content="Clear Messages" Command="{Binding ClearMessagesCommand}" HorizontalAlignment="Left" />
+                        <StackPanel Orientation="Horizontal">
+                            <Button Content="Clear Messages" Command="{Binding ClearMessagesCommand}" />
+                            <Button Content="Open Log Folder" Command="{Binding OpenLogFolderCommand}" Margin="6,0,0,0"
+                                    ToolTip="Opens the folder with the full log files, e.g. to send them for troubleshooting" />
+                        </StackPanel>
                     </Border>
                     <ListBox ItemsSource="{Binding Messages}" BorderThickness="0" FontFamily="Consolas" Padding="2" />
                 </DockPanel>

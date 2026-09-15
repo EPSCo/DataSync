@@ -16,6 +16,7 @@ namespace DataSync.Core.Logging
     {
         private static readonly object Sync = new object();
         private static readonly Encoding Utf8NoBom = new UTF8Encoding(false);
+        private static readonly string[] LevelTags = { "DBG", "INF", "WRN", "ERR" };
 
         private static LogSettings _settings;
         private static string _baseName;
@@ -34,15 +35,20 @@ namespace DataSync.Core.Logging
             }
         }
 
-        public static void Debug(string message) => Write("DBG", message, null);
+        /// <summary>
+        /// The folder the log files are written to, or null before <see cref="Configure"/>.
+        /// </summary>
+        public static string LogDirectory => Volatile.Read(ref _settings)?.Directory;
 
-        public static void Information(string message) => Write("INF", message, null);
+        public static void Debug(string message) => Write(LogLevel.Debug, message, null);
 
-        public static void Warning(string message) => Write("WRN", message, null);
+        public static void Information(string message) => Write(LogLevel.Information, message, null);
 
-        public static void Error(string message) => Write("ERR", message, null);
+        public static void Warning(string message) => Write(LogLevel.Warning, message, null);
 
-        public static void Error(Exception exception, string message) => Write("ERR", message, exception);
+        public static void Error(string message) => Write(LogLevel.Error, message, null);
+
+        public static void Error(Exception exception, string message) => Write(LogLevel.Error, message, exception);
 
         /// <summary>
         /// Flushes and closes the current file. Later writes reopen it.
@@ -56,12 +62,18 @@ namespace DataSync.Core.Logging
             }
         }
 
-        private static void Write(string level, string message, Exception exception)
+        private static void Write(LogLevel level, string message, Exception exception)
         {
+            var settings = Volatile.Read(ref _settings);
+            if (settings == null || level < settings.MinimumLevel)
+            {
+                return;
+            }
+
             var now = DateTime.Now;
             var text = new StringBuilder()
                 .Append(now.ToString("yyyy-MM-dd HH:mm:ss.fff", CultureInfo.InvariantCulture))
-                .Append(" [").Append(level).Append("] Thread ")
+                .Append(" [").Append(LevelTags[(int)level]).Append("] Thread ")
                 .Append(Thread.CurrentThread.ManagedThreadId).Append(' ')
                 .AppendLine(message);
             if (exception != null)

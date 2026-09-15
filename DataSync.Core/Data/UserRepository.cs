@@ -19,7 +19,7 @@ namespace DataSync.Core.Data
 
         public List<User> GetAll()
         {
-            return SqlDb.QueryProcedure<User>(DatabaseConfig.Instance.GetConnectionString(_kind), "[dbo].[TUsersInfo_GetAll]");
+            return SqlDb.QueryProcedure<User>(DatabaseConfig.Instance.GetConnectionString(_kind), SqlDb.DefaultCommandTimeout, "[dbo].[TUsersInfo_GetAll]");
         }
 
         /// <summary>

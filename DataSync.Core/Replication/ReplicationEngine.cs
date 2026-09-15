@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 using System.Threading.Tasks;
 using DataSync.Core.Logging;
 using DataSync.Core.Models;
@@ -20,7 +21,16 @@ namespace DataSync.Core.Replication
         {
             _settings = settings;
             _realTime = new RealTimeReplicator(remote, local, settings, Report);
-            _sync = new GapSyncReplicator(remote, local, () => _realTime.NextBaseId, settings, Report);
+
+            // Latest data first: the sync task leaves the link to the real-time task while it is behind or failing,
+            // and copies the ranges real-time skipped as soon as they are handed over.
+            Func<bool> syncShouldYield = null;
+            if (settings.PrioritizeLatestData)
+            {
+                syncShouldYield = () => _realTime.IsBehind || _realTime.FailureCount > 0;
+            }
+            _sync = new GapSyncReplicator(remote, local, () => _realTime.NextBaseId, settings, Report, syncShouldYield);
+            _realTime.RangeSkipped += (s, range) => _sync.AddGap(range);
         }
 
         /// <summary>
@@ -33,6 +43,7 @@ namespace DataSync.Core.Replication
         /// </summary>
         public void Start()
         {
+            Log.Information("Replication starting: " + _settings.Describe());
             _realTime.Initialize();
             _sync.RequestRefresh();
             _realTime.Start();
@@ -41,6 +52,7 @@ namespace DataSync.Core.Replication
 
         public void PauseSync()
         {
+            Log.Information("Pausing the sync task");
             _sync.RequestStop();
         }
 
@@ -51,6 +63,7 @@ namespace DataSync.Core.Replication
                 return;
             }
 
+            Log.Information("Resuming the sync task");
             _sync.RequestRefresh();
             _sync.Start();
         }
@@ -60,9 +73,14 @@ namespace DataSync.Core.Replication
         /// </summary>
         public void Stop()
         {
+            Log.Information("Replication stopping");
+            var stopwatch = Stopwatch.StartNew();
             _realTime.RequestStop();
             _sync.RequestStop();
-            WaitForStop(_realTime.Completion, _sync.Completion);
+            if (WaitForStop(_realTime.Completion, _sync.Completion))
+            {
+                Log.Information("Replication stopped in " + stopwatch.ElapsedMilliseconds + " ms");
+            }
         }
 
         public ReplicationStatus GetStatus()
@@ -78,6 +96,13 @@ namespace DataSync.Core.Replication
                 LastLocalBaseId      = _realTime.LastLocalBaseId,
                 LastLocalRecordTime  = _realTime.LastLocalRecordTime,
                 SyncNextBaseId       = _sync.NextBaseId,
+                RealTimeBehind       = _realTime.IsBehind,
+                SyncYielding         = _sync.IsYielding,
+                RealTimeBatchSize    = _realTime.BatchSize,
+                SyncBatchSize        = _sync.BatchSize,
+                AdaptiveBatchSize    = _settings.AdaptiveBatchSize,
+                RealTimeRowsCopied   = _realTime.RowsCopied,
+                SyncRowsCopied       = _sync.RowsCopied,
                 RealTimeFailureCount = realTimeFailures,
                 SyncFailureCount     = syncFailures,
                 FailureLimitExceeded = realTimeFailures > _settings.FailureLimit || syncFailures > _settings.FailureLimit,

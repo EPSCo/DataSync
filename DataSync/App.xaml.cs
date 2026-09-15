@@ -2,6 +2,8 @@ using System;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
@@ -50,20 +52,26 @@ namespace DataSync
         private async void OnStartup(object sender, StartupEventArgs e)
         {
             var binaryName = Path.GetFileNameWithoutExtension(Assembly.GetEntryAssembly().Location);
-            Log.Configure(binaryName, LogSettings.FromAppSettings());
-            Log.Information("Application starting up");
+            var logSettings = LogSettings.FromAppSettings();
+            Log.Configure(binaryName, logSettings);
             DispatcherUnhandledException += OnDispatcherUnhandledException;
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
                 Log.Error(args.ExceptionObject as Exception, "Unhandled exception");
+            TaskScheduler.UnobservedTaskException += (s, args) =>
+            {
+                Log.Error(args.Exception, "Unobserved task exception");
+                args.SetObserved();
+            };
 
             Info = AppInfo.Load();
+            LogEnvironment(e.Args, logSettings);
 #if DEBUG
             IsDesignMode = e.Args.Any(a => string.Equals(a, DesignModeArgument, StringComparison.OrdinalIgnoreCase));
 #endif
 
             var splash = new SplashWindow();
             splash.Show();
-            var ready = await StartupChecks.RunAsync(splash.ReportProgress, IsDesignMode);
+            var ready = await StartupChecks.RunAsync(splash.ReportProgress, IsDesignMode, splash.ShowExitButton, splash.ExitToken);
             splash.Close();
             if (!ready)
             {
@@ -87,6 +95,37 @@ namespace DataSync
             MainWindow = mainWindow;
             ShutdownMode = ShutdownMode.OnMainWindowClose;
             mainWindow.Show();
+        }
+
+        /// <summary>
+        /// Writes what is needed to understand a log file from another computer: build, machine, network and settings.
+        /// </summary>
+        private static void LogEnvironment(string[] args, LogSettings logSettings)
+        {
+            var location = Assembly.GetEntryAssembly().Location;
+            Log.Information("==================== " + Info.ProgramName + " " +
+                            Assembly.GetEntryAssembly().GetName().Version + " starting ====================");
+            try
+            {
+                Log.Information("Build " + File.GetLastWriteTime(location).ToString("yyyy-MM-dd HH:mm:ss") + ", executable " + location +
+                                (args.Length > 0 ? ", arguments: " + string.Join(" ", args) : ""));
+                Log.Information("Rig " + Info.RigName + ", computer " + Environment.MachineName + ", Windows user " +
+                                Environment.UserDomainName + "\\" + Environment.UserName);
+                Log.Information("OS " + Environment.OSVersion + (Environment.Is64BitOperatingSystem ? " 64-bit" : " 32-bit") +
+                                ", CLR " + Environment.Version + (Environment.Is64BitProcess ? " 64-bit" : " 32-bit") +
+                                " process " + Process.GetCurrentProcess().Id + ", time zone " + TimeZoneInfo.Local.Id +
+                                " (UTC" + TimeZoneInfo.Local.GetUtcOffset(DateTime.Now).ToString(@"\+hh\:mm") + ")");
+
+                var addresses = Dns.GetHostAddresses(Dns.GetHostName())
+                    .Where(a => a.AddressFamily == AddressFamily.InterNetwork || a.AddressFamily == AddressFamily.InterNetworkV6 && !a.IsIPv6LinkLocal)
+                    .Select(a => a.ToString());
+                Log.Information("IP addresses: " + string.Join(", ", addresses));
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Cannot read environment details");
+            }
+            Log.Information("Logging to " + logSettings.Directory + " at level " + logSettings.MinimumLevel);
         }
 
         /// <summary>

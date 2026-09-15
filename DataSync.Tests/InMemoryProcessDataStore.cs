@@ -14,6 +14,7 @@ namespace DataSync.Tests
         private readonly object _lock = new object();
         private readonly SortedDictionary<long, TProcessData> _rows = new SortedDictionary<long, TProcessData>();
         private readonly Dictionary<string, int> _failuresToInject = new Dictionary<string, int>();
+        private readonly List<long> _savedOrder = new List<long>();
 
         public InMemoryProcessDataStore(IEnumerable<long> baseIds = null)
         {
@@ -34,6 +35,24 @@ namespace DataSync.Tests
         public static TProcessData Row(long baseId)
         {
             return new TProcessData { BaseID = baseId, DateTimeRecord = new DateTime(2026, 1, 1).AddSeconds(baseId), WOB = baseId * 0.5 };
+        }
+
+        /// <summary>
+        /// When above 0, reads asking for more rows (or a wider BaseID range) than this throw a TimeoutException,
+        /// like a slow link where large reads exceed the command timeout.
+        /// </summary>
+        public int ReadTimeoutAboveRows { get; set; }
+
+        /// <summary>BaseIDs in the order SaveBatch inserted them (rows added directly are not included).</summary>
+        public List<long> SavedOrder
+        {
+            get
+            {
+                lock (_lock)
+                {
+                    return _savedOrder.ToList();
+                }
+            }
         }
 
         public List<long> BaseIds
@@ -121,6 +140,7 @@ namespace DataSync.Tests
             lock (_lock)
             {
                 ThrowIfFailureInjected(nameof(GetRowsAfter));
+                ThrowIfReadTooLarge(maxRows);
                 return _rows.Where(r => r.Key > baseId).Take(maxRows).Select(r => r.Value).ToList();
             }
         }
@@ -130,6 +150,7 @@ namespace DataSync.Tests
             lock (_lock)
             {
                 ThrowIfFailureInjected(nameof(GetRange));
+                ThrowIfReadTooLarge(lastBaseId - firstBaseId + 1);
                 return _rows.Where(r => r.Key >= firstBaseId && r.Key <= lastBaseId).Select(r => r.Value).ToList();
             }
         }
@@ -142,7 +163,16 @@ namespace DataSync.Tests
                 foreach (var row in rows.Where(r => !_rows.ContainsKey(r.BaseID)))
                 {
                     _rows.Add(row.BaseID, row);
+                    _savedOrder.Add(row.BaseID);
                 }
+            }
+        }
+
+        private void ThrowIfReadTooLarge(long rows)
+        {
+            if (ReadTimeoutAboveRows > 0 && rows > ReadTimeoutAboveRows)
+            {
+                throw new TimeoutException("Read of " + rows + " rows timed out");
             }
         }
 

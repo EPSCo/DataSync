@@ -17,6 +17,8 @@ namespace DataSync.Core.Configuration
 
         public static string[] RollingIntervalNames { get; } = Enum.GetNames(typeof(Logging.RollingInterval));
 
+        public static string[] LogLevelNames { get; } = Enum.GetNames(typeof(Logging.LogLevel));
+
         public string RigName { get; set; }
 
         /// <summary>Seconds.</summary>
@@ -26,6 +28,16 @@ namespace DataSync.Core.Configuration
         /// <summary>Seconds.</summary>
         public string SyncUpdateInterval { get; set; }
         public string SyncRowLimit { get; set; }
+
+        public bool PrioritizeLatestData { get; set; }
+        public bool AdaptiveBatchSize { get; set; }
+        public string MinRowLimit { get; set; }
+
+        /// <summary>Seconds.</summary>
+        public string TargetBatchSeconds { get; set; }
+
+        /// <summary>Seconds.</summary>
+        public string CommandTimeout { get; set; }
 
         /// <summary>Minutes.</summary>
         public string GapCheckInterval { get; set; }
@@ -37,6 +49,7 @@ namespace DataSync.Core.Configuration
         public bool RollOnFileSizeLimit { get; set; }
         public string FileSizeLimitBytes { get; set; }
         public string RetainedFileCountLimit { get; set; }
+        public string LogLevel { get; set; }
 
         /// <summary>
         /// The current values, as the application would use them (invalid or missing values show their defaults).
@@ -53,6 +66,11 @@ namespace DataSync.Core.Configuration
                 RealTimeRowLimit       = replication.RealTimeRowLimit.ToString(Invariant),
                 SyncUpdateInterval     = ((long)replication.SyncUpdateInterval.TotalSeconds).ToString(Invariant),
                 SyncRowLimit           = replication.SyncRowLimit.ToString(Invariant),
+                PrioritizeLatestData   = replication.PrioritizeLatestData,
+                AdaptiveBatchSize      = replication.AdaptiveBatchSize,
+                MinRowLimit            = replication.MinRowLimit.ToString(Invariant),
+                TargetBatchSeconds     = ((long)replication.TargetBatchTime.TotalSeconds).ToString(Invariant),
+                CommandTimeout         = ((long)replication.CommandTimeout.TotalSeconds).ToString(Invariant),
                 GapCheckInterval       = ((long)replication.GapCheckInterval.TotalMinutes).ToString(Invariant),
                 MaxRowsPerSecond       = replication.MaxRowsPerSecond.ToString(Invariant),
                 TimeoutCounterLimit    = replication.FailureLimit.ToString(Invariant),
@@ -60,7 +78,8 @@ namespace DataSync.Core.Configuration
                 RollingInterval        = log.RollingInterval.ToString(),
                 RollOnFileSizeLimit    = log.RollOnFileSizeLimit,
                 FileSizeLimitBytes     = log.FileSizeLimitBytes.ToString(Invariant),
-                RetainedFileCountLimit = log.RetainedFileCountLimit.ToString(Invariant)
+                RetainedFileCountLimit = log.RetainedFileCountLimit.ToString(Invariant),
+                LogLevel               = log.MinimumLevel.ToString()
             };
         }
 
@@ -78,13 +97,18 @@ namespace DataSync.Core.Configuration
                    ?? CheckInt(RealTimeRowLimit, 1, "Real-time row limit")
                    ?? CheckInt(SyncUpdateInterval, 0, "Sync pause between batches")
                    ?? CheckInt(SyncRowLimit, 1, "Sync row limit")
+                   ?? CheckInt(MinRowLimit, 1, "Minimum row limit")
+                   ?? CheckInt(TargetBatchSeconds, 1, "Target read time")
+                   ?? CheckInt(CommandTimeout, 5, "Command timeout")
+                   ?? CheckTargetBelowTimeout()
                    ?? CheckInt(GapCheckInterval, 1, "Gap check interval")
                    ?? CheckInt(MaxRowsPerSecond, 0, "Max rows per second")
                    ?? CheckInt(TimeoutCounterLimit, 0, "Failures before restart")
                    ?? CheckLogDirectory()
                    ?? (RollingIntervalNames.Contains(RollingInterval) ? null : "Select a log rolling interval.")
                    ?? CheckLong(FileSizeLimitBytes, 1024, "Log file size limit")
-                   ?? CheckInt(RetainedFileCountLimit, 1, "Retained log files");
+                   ?? CheckInt(RetainedFileCountLimit, 1, "Retained log files")
+                   ?? (LogLevelNames.Contains(LogLevel) ? null : "Select a log level.");
         }
 
         /// <summary>
@@ -99,6 +123,11 @@ namespace DataSync.Core.Configuration
                 [SettingKeys.RealTimeRowLimit]       = NormalizeInt(RealTimeRowLimit),
                 [SettingKeys.SyncUpdateInterval]     = NormalizeInt(SyncUpdateInterval),
                 [SettingKeys.SyncRowLimit]           = NormalizeInt(SyncRowLimit),
+                [SettingKeys.PrioritizeLatestData]   = PrioritizeLatestData ? "true" : "false",
+                [SettingKeys.AdaptiveBatchSize]      = AdaptiveBatchSize ? "true" : "false",
+                [SettingKeys.MinRowLimit]            = NormalizeInt(MinRowLimit),
+                [SettingKeys.TargetBatchSeconds]     = NormalizeInt(TargetBatchSeconds),
+                [SettingKeys.CommandTimeout]         = NormalizeInt(CommandTimeout),
                 [SettingKeys.GapCheckInterval]       = NormalizeInt(GapCheckInterval),
                 [SettingKeys.MaxRowsPerSecond]       = NormalizeInt(MaxRowsPerSecond),
                 [SettingKeys.TimeoutCounterLimit]    = NormalizeInt(TimeoutCounterLimit),
@@ -106,7 +135,8 @@ namespace DataSync.Core.Configuration
                 [SettingKeys.RollingInterval]        = RollingInterval,
                 [SettingKeys.RollOnFileSizeLimit]    = RollOnFileSizeLimit ? "true" : "false",
                 [SettingKeys.FileSizeLimitBytes]     = long.Parse(FileSizeLimitBytes.Trim(), NumberStyles.Integer, Invariant).ToString(Invariant),
-                [SettingKeys.RetainedFileCountLimit] = NormalizeInt(RetainedFileCountLimit)
+                [SettingKeys.RetainedFileCountLimit] = NormalizeInt(RetainedFileCountLimit),
+                [SettingKeys.LogLevel]               = LogLevel
             };
         }
 
@@ -136,6 +166,14 @@ namespace DataSync.Core.Configuration
             return long.TryParse(value?.Trim(), NumberStyles.Integer, Invariant, out var number) && number >= minimum
                 ? null
                 : name + " must be a whole number of at least " + minimum + ".";
+        }
+
+        // Call after both values are known to be valid numbers.
+        private string CheckTargetBelowTimeout()
+        {
+            return int.Parse(TargetBatchSeconds.Trim(), NumberStyles.Integer, Invariant) < int.Parse(CommandTimeout.Trim(), NumberStyles.Integer, Invariant)
+                ? null
+                : "Target read time must be less than the command timeout.";
         }
 
         private string CheckLogDirectory()

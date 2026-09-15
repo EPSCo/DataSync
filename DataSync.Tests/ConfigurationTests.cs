@@ -17,6 +17,10 @@ namespace DataSync.Tests
                 RealTimeRowLimit = "1000",
                 SyncUpdateInterval = "0",
                 SyncRowLimit = " 500 ",
+                AdaptiveBatchSize = true,
+                MinRowLimit = "20",
+                TargetBatchSeconds = "3",
+                CommandTimeout = "60",
                 GapCheckInterval = "10",
                 MaxRowsPerSecond = "0",
                 TimeoutCounterLimit = "10",
@@ -24,7 +28,8 @@ namespace DataSync.Tests
                 RollingInterval = "Day",
                 RollOnFileSizeLimit = true,
                 FileSizeLimitBytes = "1048576",
-                RetainedFileCountLimit = "10"
+                RetainedFileCountLimit = "10",
+                LogLevel = "Debug"
             };
         }
 
@@ -50,6 +55,18 @@ namespace DataSync.Tests
             StringAssert.StartsWith(settings.Validate(), "Select a log rolling interval");
 
             settings = ValidSettings();
+            settings.CommandTimeout = "3";
+            StringAssert.StartsWith(settings.Validate(), "Command timeout");
+
+            settings = ValidSettings();
+            settings.TargetBatchSeconds = "60";
+            StringAssert.StartsWith(settings.Validate(), "Target read time must be less");
+
+            settings = ValidSettings();
+            settings.LogLevel = "Verbose";
+            StringAssert.StartsWith(settings.Validate(), "Select a log level");
+
+            settings = ValidSettings();
             settings.RigName = " ";
             Assert.IsNotNull(settings.Validate());
         }
@@ -62,6 +79,9 @@ namespace DataSync.Tests
             Assert.AreEqual("MD-2", values[SettingKeys.RigName]);
             Assert.AreEqual("500", values[SettingKeys.SyncRowLimit]);
             Assert.AreEqual("true", values[SettingKeys.RollOnFileSizeLimit]);
+            Assert.AreEqual("true", values[SettingKeys.AdaptiveBatchSize]);
+            Assert.AreEqual("60", values[SettingKeys.CommandTimeout]);
+            Assert.AreEqual("Debug", values[SettingKeys.LogLevel]);
         }
 
         [TestMethod]

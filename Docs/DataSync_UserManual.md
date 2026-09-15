@@ -76,14 +76,28 @@ The files are bound to the machine's CPU. If they were created for another machi
 - **Sync Old Data Task**: back-fills older records missing locally, newest first. *Pause/Resume Sync Task* stops
   and restarts it. The real-time task keeps running.
 - **Details** tab: the record ranges and their state. *Syncing* rows are yellow, the *RealTime* row is green.
-- **Messages** tab: recent events and errors, newest first. Full logs are in the `logs` folder.
+- **Messages** tab: recent events and errors, newest first. *Open Log Folder* opens the folder with the full log
+  files (see [Logs and troubleshooting](#logs-and-troubleshooting)).
 - **Test Remote / Local Connection**: checks a database connection.
 - **Clear Local Data**: asks for the daily password, stops replication, empties the local run-time tables and
   restarts.
 - **Settings** (top-right of the header): edits the rig name, replication tuning and logging settings below. The
   values are checked, saved to `DataSync.exe.config` and applied after a restart, which DataSync offers to do.
   Saving needs write access to the application folder.
-- If a task fails too many times in a row (`TimeoutCounterLimit`), DataSync restarts itself.
+- **Batch** (on each task): how many rows the next remote read asks for, and the recent copy rate. With adaptive
+  batch size on (the default), reads start small and grow while they finish quickly, and shrink after slow reads,
+  failures or timeouts. This keeps transfers steady on slow or high-latency networks. Turn it off in Settings to always
+  read the row limits.
+- **Latest data first** (`PrioritizeLatestData`, on by default): the newest data always comes first. After a network
+  outage, or when the link is too slow to keep up, the Real-Time task jumps to the newest records (status
+  *Catching up*) instead of copying the backlog oldest-first. The records it skipped are handed to the Sync task at
+  once and back-filled newest first, so playback history fills in from the present backwards. While Real-Time is
+  behind or failing, the Sync task waits (status *Waiting for real-time*) so it does not compete for the link.
+- **Network outages**: both tasks keep retrying on their own. With latest data first on, the Real-Time task retries at
+  least every 10 seconds, so new records flow again soon after the link returns.
+- If a task fails too many times in a row (`TimeoutCounterLimit`), DataSync restarts itself, but only when both
+  databases answer. While a database is unreachable a restart cannot help, so DataSync keeps running and retrying
+  (the message list says so once).
 
 ## Configuration (`DataSync.exe.config`)
 
@@ -91,9 +105,39 @@ The files are bound to the machine's CPU. If they were created for another machi
 |---|---|
 | `RigName` | Rig name shown in the header |
 | `RealTimeUpdateInterval` | Seconds between real-time reads once caught up |
-| `RealTimeRowLimit` / `SyncRowLimit` | Rows per real-time read / per sync batch |
+| `RealTimeRowLimit` / `SyncRowLimit` | Maximum rows per real-time read / per sync batch (every read when `AdaptiveBatchSize` is `false`) |
+| `AdaptiveBatchSize` | `true` (default): size each read from recent read times, between `MinRowLimit` and the row limits |
+| `MinRowLimit` | Smallest adaptive read size, and the size of the first read |
+| `TargetBatchSeconds` | Seconds one remote read should take when adaptive (less than `CommandTimeout`) |
+| `CommandTimeout` | Seconds before a database read or save is abandoned as timed out (minimum 5) |
+| `PrioritizeLatestData` | `true` (default): newest records first, skipped records back-filled newest first; `false`: catch up oldest-first, as DDRREP did |
 | `SyncUpdateInterval` | Seconds to pause between sync batches |
 | `MaxRowsPerSecond` | Copy rate limit per task (0 = unlimited) |
 | `GapCheckInterval` | Minutes between checks for new gaps |
-| `TimeoutCounterLimit` | Consecutive failures before restart |
+| `TimeoutCounterLimit` | Consecutive failures before restart (skipped while a database is unreachable) |
 | `LogPathDir`, `RollingInterval`, `RollOnFileSizeLimit`, `FileSizeLimitBytes`, `RetainedFileCountLimit` | Logging |
+| `LogLevel` | `Information` (default), `Debug` (also every remote read, for troubleshooting a network), `Warning` or `Error` |
+
+## Logs and troubleshooting
+
+DataSync writes log files to the `logs` folder next to `DataSync.exe` (`LogPathDir`), one file per day by default,
+named like `DataSync-20260915.log`. Click *Open Log Folder* on the **Messages** tab to find them, and send the files
+covering the problem.
+
+At the default level (`Information`) the log contains:
+
+- **Startup**: version and build date, computer, Windows user, OS, time zone, IP addresses, the replication
+  settings in effect, and the server, database and login name of each connection (never passwords). It also records
+  each connection check, with how long it took, and hardware lock problems.
+- **Every minute, per task**: reads, rows copied and rows per second, average and slowest read time, failures,
+  batch size, and position. For Real-Time this is the newest local record and its age. For Sync it is the ranges
+  and records left and the time spent waiting for Real-Time.
+- **Events**: errors, with the number of consecutive failures and the next retry. A repeated identical error is
+  logged on one line, without the stack trace. Also recoveries (with how long the task was failing), jumps to the
+  newest records, catching up, sync ranges started and finished, batch-size reductions, long waits for Real-Time,
+  pause/resume, and restart decisions.
+
+To troubleshoot a slow or unstable network, set **Log level** to `Debug` in Settings and restart. Every real-time and
+sync read is then logged with its record range, read time and save time. This writes several MB per day, so also
+raise *File size limit* (e.g. `10485760`) and *Retained files* (e.g. `30`), and set it back to `Information`
+afterwards.

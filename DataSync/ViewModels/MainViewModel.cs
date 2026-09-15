@@ -2,6 +2,7 @@ using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -22,16 +23,21 @@ namespace DataSync.ViewModels
     {
         private const int MaxMessages = 100;
         private const string TimeFormat = "yyyy/MM/dd HH:mm:ss";
+        private static readonly TimeSpan DatabaseCheckInterval = TimeSpan.FromSeconds(30);
 
         private readonly IShell _shell;
         private readonly bool _designMode;
         private readonly ConcurrentQueue<string> _pendingMessages = new ConcurrentQueue<string>();
         private readonly DispatcherTimer _timer;
+        private readonly Stopwatch _rateClock = new Stopwatch();
 
         private ReplicationEngine _engine;
         private Func<ReplicationStatus> _getStatus;
         private bool _stopped;
         private bool _restarting;
+        private bool _checkingDatabases;
+        private bool _unreachableReported;
+        private DateTime _nextDatabaseCheck;
         private bool _isBusy;
 
         private string _currentTime;
@@ -41,6 +47,12 @@ namespace DataSync.ViewModels
         private string _syncState;
         private string _syncNextBaseId = "-";
         private string _syncButtonText = "Pause Sync Task";
+        private string _realTimeBatch = "-";
+        private string _syncBatch = "-";
+        private long _realTimeRowsCopied;
+        private long _syncRowsCopied;
+        private double _realTimeRate;
+        private double _syncRate;
 
         public MainViewModel(AppInfo info, string userName, IShell shell, bool designMode)
         {
@@ -60,6 +72,7 @@ namespace DataSync.ViewModels
             ClearLocalDataCommand = new RelayCommand(ClearLocalData, () => !_designMode && !IsBusy);
             RestartCommand = new RelayCommand(Restart, () => !IsBusy);
             ClearMessagesCommand = new RelayCommand(() => Messages.Clear());
+            OpenLogFolderCommand = new RelayCommand(OpenLogFolder);
             SettingsCommand = new RelayCommand(EditSettings, () => !IsBusy);
 
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
@@ -81,6 +94,7 @@ namespace DataSync.ViewModels
         public ICommand ClearLocalDataCommand { get; }
         public ICommand RestartCommand { get; }
         public ICommand ClearMessagesCommand { get; }
+        public ICommand OpenLogFolderCommand { get; }
         public ICommand SettingsCommand { get; }
 
         public string CurrentTime
@@ -120,6 +134,20 @@ namespace DataSync.ViewModels
             private set { SetProperty(ref _syncNextBaseId, value); }
         }
 
+        /// <summary>Next read size and recent copy rate of the real-time task.</summary>
+        public string RealTimeBatch
+        {
+            get { return _realTimeBatch; }
+            private set { SetProperty(ref _realTimeBatch, value); }
+        }
+
+        /// <summary>Next read size and recent copy rate of the sync task.</summary>
+        public string SyncBatch
+        {
+            get { return _syncBatch; }
+            private set { SetProperty(ref _syncBatch, value); }
+        }
+
         public string SyncButtonText
         {
             get { return _syncButtonText; }
@@ -153,9 +181,11 @@ namespace DataSync.ViewModels
                 return;
             }
 
-            var engine = new ReplicationEngine(new SqlProcessDataStore(ConnectionKind.Remote),
-                                               new SqlProcessDataStore(ConnectionKind.Local),
-                                               ReplicationSettings.FromAppSettings());
+            var settings = ReplicationSettings.FromAppSettings();
+            var commandTimeout = (int)settings.CommandTimeout.TotalSeconds;
+            var engine = new ReplicationEngine(new SqlProcessDataStore(ConnectionKind.Remote, commandTimeout),
+                                               new SqlProcessDataStore(ConnectionKind.Local, commandTimeout),
+                                               settings);
             engine.MessageLogged += (s, message) => _pendingMessages.Enqueue(message);
             _engine = engine;
 
@@ -213,22 +243,100 @@ namespace DataSync.ViewModels
 
             if (status.FailureLimitExceeded)
             {
-                Log.Warning("Too many consecutive failures (RealTime: " + status.RealTimeFailureCount +
-                            ", Sync: " + status.SyncFailureCount + "), restarting");
-                Restart();
-                return;
+                RestartIfDatabasesReachable(status);
+            }
+            else
+            {
+                _unreachableReported = false;
             }
 
-            RealTimeState = status.RealTimeState.ToString();
+            RealTimeState = status.RealTimeBehind && status.RealTimeState != TaskState.Stop
+                ? "Catching up"
+                : status.RealTimeState.ToString();
             LastBaseId = status.LastLocalBaseId.ToString();
             LastRecordTime = status.LastLocalRecordTime?.ToString(TimeFormat) ?? "";
-            SyncState = status.SyncState.ToString();
+            SyncState = status.SyncYielding && status.SyncState != TaskState.Stop
+                ? "Waiting for real-time"
+                : status.SyncState.ToString();
             SyncNextBaseId = status.SyncNextBaseId > 0 ? status.SyncNextBaseId.ToString() : "-";
+            UpdateBatchInfo(status);
 
             // Downloading or NoOldData (waiting to check for new gaps) both mean the sync task is running.
             SyncButtonText = status.SyncState == TaskState.Stop ? "Resume Sync Task" : "Pause Sync Task";
 
             UpdateRanges(status);
+        }
+
+        /// <summary>
+        /// Restarts after too many consecutive failures, but only when both databases answer. While one is unreachable
+        /// (a network outage) a restart cannot help and would stop at the startup checks; the replication tasks keep
+        /// retrying and resume on their own when the link returns.
+        /// </summary>
+        private async void RestartIfDatabasesReachable(ReplicationStatus status)
+        {
+            if (_checkingDatabases || DateTime.UtcNow < _nextDatabaseCheck)
+            {
+                return;
+            }
+
+            _checkingDatabases = true;
+            try
+            {
+                var reachable = await Task.Run(() => DatabaseConfig.Instance.CheckConnection(ConnectionKind.Remote) &&
+                                                     DatabaseConfig.Instance.CheckConnection(ConnectionKind.Local));
+                if (_stopped)
+                {
+                    return;
+                }
+
+                if (reachable)
+                {
+                    Log.Warning("Too many consecutive failures (RealTime: " + status.RealTimeFailureCount +
+                                ", Sync: " + status.SyncFailureCount + "), restarting");
+                    Restart();
+                    return;
+                }
+
+                _nextDatabaseCheck = DateTime.UtcNow + DatabaseCheckInterval;
+                if (!_unreachableReported)
+                {
+                    _unreachableReported = true;
+                    const string message = "Database unreachable after repeated failures: not restarting, replication keeps retrying";
+                    Log.Warning(message);
+                    AddMessage(message);
+                }
+            }
+            finally
+            {
+                _checkingDatabases = false;
+            }
+        }
+
+        private void UpdateBatchInfo(ReplicationStatus status)
+        {
+            // Rates from the change in running totals between timer ticks, smoothed over a few seconds.
+            var seconds = _rateClock.Elapsed.TotalSeconds;
+            if (_rateClock.IsRunning && seconds > 0)
+            {
+                _realTimeRate = Smooth(_realTimeRate, (status.RealTimeRowsCopied - _realTimeRowsCopied) / seconds);
+                _syncRate = Smooth(_syncRate, (status.SyncRowsCopied - _syncRowsCopied) / seconds);
+            }
+            _realTimeRowsCopied = status.RealTimeRowsCopied;
+            _syncRowsCopied = status.SyncRowsCopied;
+            _rateClock.Restart();
+
+            RealTimeBatch = FormatBatch(status.RealTimeBatchSize, status.AdaptiveBatchSize, _realTimeRate);
+            SyncBatch = FormatBatch(status.SyncBatchSize, status.AdaptiveBatchSize, _syncRate);
+        }
+
+        private static double Smooth(double previous, double sample)
+        {
+            return 0.3 * sample + 0.7 * previous;
+        }
+
+        private static string FormatBatch(int batchSize, bool adaptive, double rowsPerSecond)
+        {
+            return batchSize + " rows" + (adaptive ? "" : " (fixed)") + ", " + rowsPerSecond.ToString("0") + " rows/s";
         }
 
         private void UpdateRanges(ReplicationStatus status)
@@ -317,6 +425,26 @@ namespace DataSync.ViewModels
             }
         }
 
+        private void OpenLogFolder()
+        {
+            var directory = Log.LogDirectory;
+            if (string.IsNullOrEmpty(directory))
+            {
+                _shell.ShowError("Logging is not configured.", "Logs");
+                return;
+            }
+
+            try
+            {
+                _shell.OpenFolder(directory);
+            }
+            catch (Exception ex)
+            {
+                Log.Error(ex, "Cannot open log folder " + directory);
+                _shell.ShowError("Cannot open the log folder " + directory + ": " + ex.Message, "Logs");
+            }
+        }
+
         private async void ClearLocalData()
         {
             if (!_shell.ConfirmClearData())
@@ -385,6 +513,9 @@ namespace DataSync.ViewModels
                 RealTimeNextBaseId  = 125001,
                 LastLocalRecordTime = DateTime.Now,
                 SyncNextBaseId      = 90000,
+                RealTimeBatchSize   = 20,
+                SyncBatchSize       = 340,
+                AdaptiveBatchSize   = true,
                 Ranges = new List<SyncRange>
                 {
                     Sample(1, 50000, -1, RangeStatus.Synced),

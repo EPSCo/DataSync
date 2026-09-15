@@ -23,5 +23,13 @@ namespace DataSync.Core.Configuration
         public const string MaxRowsPerSecond = "MaxRowsPerSecond";
         public const string GapCheckInterval = "GapCheckInterval";
         public const string TimeoutCounterLimit = "TimeoutCounterLimit";
+
+        // DataSync only (not in DDRREP).
+        public const string AdaptiveBatchSize = "AdaptiveBatchSize";
+        public const string MinRowLimit = "MinRowLimit";
+        public const string TargetBatchSeconds = "TargetBatchSeconds";
+        public const string CommandTimeout = "CommandTimeout";
+        public const string PrioritizeLatestData = "PrioritizeLatestData";
+        public const string LogLevel = "LogLevel";
     }
 }

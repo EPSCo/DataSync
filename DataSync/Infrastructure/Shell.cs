@@ -1,3 +1,5 @@
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Windows;
 using DataSync.Views;
@@ -23,6 +25,9 @@ namespace DataSync.Infrastructure
         bool EditSettings();
 
         void RestartApplication();
+
+        /// <summary>Opens a folder in Windows Explorer, creating it if needed.</summary>
+        void OpenFolder(string path);
     }
 
     public sealed class Shell : IShell
@@ -61,6 +66,12 @@ namespace DataSync.Infrastructure
         public void RestartApplication()
         {
             App.Restart();
+        }
+
+        public void OpenFolder(string path)
+        {
+            Directory.CreateDirectory(path);
+            Process.Start("explorer.exe", "\"" + path + "\"");
         }
 
         private static void Show(string message, string title, MessageBoxImage image)

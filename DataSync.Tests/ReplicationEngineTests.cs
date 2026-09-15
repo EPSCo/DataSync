@@ -79,6 +79,33 @@ namespace DataSync.Tests
         }
 
         [TestMethod]
+        public void Start_AfterOutage_CopiesNewestRowsBeforeBackfilling()
+        {
+            var remote = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 100));
+            var local = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 100));
+            var engine = new ReplicationEngine(remote, local, FastSettings()); // PrioritizeLatestData is on by default
+
+            engine.Start();
+            try
+            {
+                Assert.IsTrue(WaitUntil(() => engine.GetStatus().SyncState == TaskState.NoOldData));
+
+                remote.Add(InMemoryProcessDataStore.Ids(101, 5000)); // rows written while the link was down
+
+                Assert.IsTrue(WaitUntil(() => local.BaseIds.SequenceEqual(remote.BaseIds)),
+                    $"local has {local.BaseIds.Count} of {remote.BaseIds.Count} rows");
+
+                var order = local.SavedOrder;
+                Assert.IsTrue(order.IndexOf(5000) < order.IndexOf(2500), "the newest row was not copied before the backlog");
+                Assert.IsTrue(order.IndexOf(4000) < order.IndexOf(1000), "the backlog was not copied newest first");
+            }
+            finally
+            {
+                engine.Stop();
+            }
+        }
+
+        [TestMethod]
         public void PauseAndResumeSync_ResumesBackfill()
         {
             var remote = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 2000));

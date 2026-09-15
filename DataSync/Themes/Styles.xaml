@@ -51,6 +51,12 @@
             <Trigger Property="Text" Value="NoOldData">
                 <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
             </Trigger>
+            <Trigger Property="Text" Value="Catching up">
+                <Setter Property="Foreground" Value="{StaticResource AccentBrush}" />
+            </Trigger>
+            <Trigger Property="Text" Value="Waiting for real-time">
+                <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
+            </Trigger>
             <Trigger Property="Text" Value="Stop">
                 <Setter Property="Foreground" Value="{StaticResource DangerBrush}" />
             </Trigger>

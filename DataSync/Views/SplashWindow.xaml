@@ -28,7 +28,11 @@
                 <TextBlock x:Name="VersionText" Foreground="{StaticResource HeaderMutedTextBrush}" Margin="64,10,0,0" />
             </StackPanel>
 
-            <TextBlock Grid.Row="1" x:Name="StatusText" Foreground="#CBD2D9" Margin="0,0,0,8" />
+            <DockPanel Grid.Row="1" Margin="0,0,0,8">
+                <Button DockPanel.Dock="Right" x:Name="ExitButton" Content="Exit" Style="{StaticResource HeaderButton}"
+                        Visibility="Collapsed" Margin="12,0,0,0" Click="OnExitClick" />
+                <TextBlock x:Name="StatusText" Foreground="#CBD2D9" VerticalAlignment="Bottom" TextTrimming="CharacterEllipsis" />
+            </DockPanel>
             <ProgressBar Grid.Row="2" x:Name="Progress" Height="6" Maximum="100"
                          Foreground="{StaticResource AccentBrush}" Background="#334155" BorderThickness="0" />
             <TextBlock Grid.Row="3" x:Name="CopyrightText" Foreground="#7B8794" FontSize="11" Margin="0,16,0,0" />

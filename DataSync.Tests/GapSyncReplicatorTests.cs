@@ -149,6 +149,92 @@ namespace DataSync.Tests
         }
 
         [TestMethod]
+        public void RunIteration_AdaptiveBatchSize_BackfillsEverythingDespiteTimeouts()
+        {
+            var remote = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 3000));
+            var local = new InMemoryProcessDataStore();
+            var replicator = Create(remote, local, boundary: 3001, rowLimit: 1000);
+            remote.ReadTimeoutAboveRows = 100;
+
+            RunUntilIdle(replicator, maxIterations: 500);
+
+            CollectionAssert.AreEqual(remote.BaseIds, local.BaseIds);
+            Assert.IsTrue(replicator.BatchSize <= 100, $"batch size {replicator.BatchSize}");
+        }
+
+        [TestMethod]
+        public void AddGap_CopiesSkippedRangeBeforeOlderGapsNewestFirst()
+        {
+            var remote = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 100));
+            var local = new InMemoryProcessDataStore();
+            long boundary = 101;
+            var settings = new ReplicationSettings
+            {
+                SyncRowLimit = 10,
+                AdaptiveBatchSize = false,
+                SyncUpdateInterval = TimeSpan.Zero,
+                MaxRowsPerSecond = 0,
+                GapCheckInterval = GapCheckInterval
+            };
+            var replicator = new GapSyncReplicator(remote, local, () => boundary, settings, message => { });
+            replicator.RunIteration(); // back-filling 1-100: copies 91-100
+
+            // After an outage the real-time task copied the newest rows (291-300) and skipped 101-290.
+            remote.Add(InMemoryProcessDataStore.Ids(101, 300));
+            local.Add(InMemoryProcessDataStore.Ids(291, 300));
+            boundary = 301;
+            replicator.AddGap(new BaseIdRange { BaseIdBegin = 101, BaseIdEnd = 290 });
+
+            replicator.RunIteration();
+
+            CollectionAssert.IsSubsetOf(InMemoryProcessDataStore.Ids(281, 290).ToList(), local.BaseIds);
+            Assert.IsFalse(local.BaseIds.Contains(90), "the older gap was continued before the skipped range");
+            Assert.AreEqual(280, replicator.NextBaseId);
+
+            RunUntilIdle(replicator);
+
+            CollectionAssert.AreEqual(remote.BaseIds, local.BaseIds);
+        }
+
+        [TestMethod]
+        public void AddGap_IgnoresRangeAlreadyFoundByComparingDatabases()
+        {
+            var remote = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 100));
+            var local = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(91, 100));
+            var replicator = Create(remote, local, boundary: 91);
+            replicator.AddGap(new BaseIdRange { BaseIdBegin = 1, BaseIdEnd = 90 }); // queued before the first refresh
+
+            RunUntilIdle(replicator);
+            replicator.AddGap(new BaseIdRange { BaseIdBegin = 50, BaseIdEnd = 60 }); // overlaps a synced range
+
+            Assert.AreEqual(TaskState.NoOldData, replicator.State);
+            CollectionAssert.AreEqual(remote.BaseIds, local.BaseIds);
+            Assert.AreEqual(1, replicator.GetRangesSnapshot().Count(r => r.Status == RangeStatus.Synced));
+        }
+
+        [TestMethod]
+        public void RunIteration_WhileRealTimeNeedsTheLink_Waits()
+        {
+            var remote = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 50));
+            var local = new InMemoryProcessDataStore();
+            var realTimeBusy = true;
+            var settings = new ReplicationSettings { SyncRowLimit = 10, MaxRowsPerSecond = 0, GapCheckInterval = GapCheckInterval };
+            var replicator = new GapSyncReplicator(remote, local, () => 51, settings, message => { }, () => realTimeBusy);
+
+            var delay = replicator.RunIteration();
+
+            Assert.IsTrue(replicator.IsYielding);
+            Assert.IsTrue(delay > TimeSpan.Zero);
+            Assert.AreEqual(0, local.BaseIds.Count);
+
+            realTimeBusy = false;
+            RunUntilIdle(replicator);
+
+            Assert.IsFalse(replicator.IsYielding);
+            CollectionAssert.AreEqual(remote.BaseIds, local.BaseIds);
+        }
+
+        [TestMethod]
         public void RunIteration_RetriesRefreshWhenRangesCannotBeRead()
         {
             var remote = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 20));

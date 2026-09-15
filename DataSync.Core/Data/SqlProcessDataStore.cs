@@ -19,36 +19,39 @@ namespace DataSync.Core.Data
         private static readonly string ColumnList = string.Join(", ", ColumnProperties.Select(p => "[" + p.Name + "]"));
 
         private readonly ConnectionKind _kind;
+        private readonly int _commandTimeout;
 
-        public SqlProcessDataStore(ConnectionKind kind)
+        /// <param name="commandTimeoutSeconds">Timeout of each command and bulk copy.</param>
+        public SqlProcessDataStore(ConnectionKind kind, int commandTimeoutSeconds = SqlDb.DefaultCommandTimeout)
         {
             _kind = kind;
+            _commandTimeout = commandTimeoutSeconds;
         }
 
         private string ConnectionString => DatabaseConfig.Instance.GetConnectionString(_kind);
 
         public TProcessData GetLastRecord()
         {
-            return SqlDb.QueryProcedure<TProcessData>(ConnectionString, "[dbo].[Rep_TProcessData_GetLastBaseId]").FirstOrDefault()
+            return SqlDb.QueryProcedure<TProcessData>(ConnectionString, _commandTimeout, "[dbo].[Rep_TProcessData_GetLastBaseId]").FirstOrDefault()
                    ?? new TProcessData { BaseID = 0, DateTimeRecord = DateTime.Now };
         }
 
         public List<BaseIdRange> GetBaseIdRanges()
         {
             // Note the triple "s" in the procedure name.
-            return SqlDb.QueryProcedure<BaseIdRange>(ConnectionString, "[dbo].[Rep_TProcesssData_GetBaseIdRanges]");
+            return SqlDb.QueryProcedure<BaseIdRange>(ConnectionString, _commandTimeout, "[dbo].[Rep_TProcesssData_GetBaseIdRanges]");
         }
 
         public List<TProcessData> GetRowsAfter(long baseId, int maxRows)
         {
-            return SqlDb.QueryProcedure<TProcessData>(ConnectionString, "[dbo].[Rep_TProcessData_GetByBaseId]",
+            return SqlDb.QueryProcedure<TProcessData>(ConnectionString, _commandTimeout, "[dbo].[Rep_TProcessData_GetByBaseId]",
                 new SqlParameter("@BaseID", SqlDbType.BigInt) { Value = baseId },
                 new SqlParameter("@MaxRows", SqlDbType.Int) { Value = maxRows });
         }
 
         public List<TProcessData> GetRange(long firstBaseId, long lastBaseId)
         {
-            return SqlDb.QueryProcedure<TProcessData>(ConnectionString, "[dbo].[Rep_TProcessData_GetRange]",
+            return SqlDb.QueryProcedure<TProcessData>(ConnectionString, _commandTimeout, "[dbo].[Rep_TProcessData_GetRange]",
                     new SqlParameter("@FirstCode", SqlDbType.BigInt) { Value = firstBaseId },
                     new SqlParameter("@LastCode", SqlDbType.BigInt) { Value = lastBaseId })
                 .OrderBy(t => t.BaseID)
@@ -86,12 +89,13 @@ namespace DataSync.Core.Data
                 connection.Open();
                 using (var transaction = connection.BeginTransaction())
                 {
-                    SqlDb.ExecuteText(connection, transaction,
+                    SqlDb.ExecuteText(connection, transaction, _commandTimeout,
                         "SELECT TOP 0 " + ColumnList + " INTO #TProcessDataBatch FROM [dbo].[TProcessData];");
 
                     using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.Default, transaction))
                     {
                         bulkCopy.DestinationTableName = "#TProcessDataBatch";
+                        bulkCopy.BulkCopyTimeout = _commandTimeout;
                         foreach (var property in ColumnProperties)
                         {
                             bulkCopy.ColumnMappings.Add(property.Name, property.Name);
@@ -99,7 +103,7 @@ namespace DataSync.Core.Data
                         bulkCopy.WriteToServer(table);
                     }
 
-                    SqlDb.ExecuteText(connection, transaction,
+                    SqlDb.ExecuteText(connection, transaction, _commandTimeout,
                         "INSERT INTO [dbo].[TProcessData] (" + ColumnList + ") " +
                         "SELECT " + ColumnList + " FROM (" +
                         "SELECT *, ROW_NUMBER() OVER (PARTITION BY BaseID ORDER BY (SELECT NULL)) AS BatchRowNumber FROM #TProcessDataBatch" +
@@ -123,7 +127,7 @@ namespace DataSync.Core.Data
                 throw new InvalidOperationException("Only the local database can be cleared.");
             }
 
-            SqlDb.ExecuteProcedure(ConnectionString, "[dbo].[Rep_Local_Truncate_Table]");
+            SqlDb.ExecuteProcedure(ConnectionString, _commandTimeout, "[dbo].[Rep_Local_Truncate_Table]");
         }
     }
 }
