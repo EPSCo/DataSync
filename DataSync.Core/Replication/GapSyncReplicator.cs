@@ -28,6 +28,7 @@ namespace DataSync.Core.Replication
         private readonly Func<long> _getBoundary;
         private readonly Func<bool> _shouldYield;
         private readonly ConcurrentQueue<BaseIdRange> _pendingGaps = new ConcurrentQueue<BaseIdRange>();
+        private readonly SyncBatchSize _batch;
 
         // _ranges, _syncingIndex and _nextBaseId are only changed by the task thread; the lock is for readers.
         private List<SyncRange> _ranges = new List<SyncRange>();
@@ -54,12 +55,19 @@ namespace DataSync.Core.Replication
         /// <param name="shouldYield">While it returns true the task does not read, leaving the link to the real-time task.</param>
         public GapSyncReplicator(IProcessDataStore remote, IProcessDataStore local, Func<long> getBoundary,
                                  ReplicationSettings settings, Action<string> report, Func<bool> shouldYield)
-            : base("Sync", settings, settings.SyncRowLimit, report)
+            : this(remote, local, getBoundary, settings, report, shouldYield, settings.CreateSyncBatchSize())
+        {
+        }
+
+        private GapSyncReplicator(IProcessDataStore remote, IProcessDataStore local, Func<long> getBoundary,
+                                  ReplicationSettings settings, Action<string> report, Func<bool> shouldYield, SyncBatchSize batch)
+            : base("Sync", settings, batch, report)
         {
             _remote = remote;
             _local = local;
             _getBoundary = getBoundary;
             _shouldYield = shouldYield;
+            _batch = batch;
         }
 
         /// <summary>
@@ -190,9 +198,8 @@ namespace DataSync.Core.Replication
             {
                 return OnReadFailure("GetSyncDataFromRemoteDatabase", ex);
             }
-            // Sized by BaseIDs in the window, not rows returned, so sparse ranges are not mistaken for short reads.
             var readTime = stopwatch.Elapsed;
-            RecordRead(requested, (int)(windowEnd - windowBegin + 1), readTime);
+            RecordRead(readTime);
 
             try
             {
@@ -203,6 +210,12 @@ namespace DataSync.Core.Replication
                 // The window is not advanced, so it is read and saved again.
                 return OnFailure("SaveSyncDataToLocalDatabase", ex);
             }
+
+            // Throughput in BaseIDs covered, not rows returned, so sparse ranges are not mistaken for slow reads.
+            var covered = (int)(windowEnd - windowBegin + 1);
+            var copyTime = stopwatch.Elapsed;
+            AdjustBatch(() => _batch.OnRead(requested, covered, copyTime),
+                        () => "measured " + FormatRate(_batch.RecordsPerSecond) + " records");
 
             Log.Debug("Sync read " + rows.Count + " rows in BaseIDs " + windowBegin + "-" + windowEnd + " in " +
                       FormatSeconds(readTime) + ", saved in " + FormatSeconds(stopwatch.Elapsed - readTime));
@@ -217,6 +230,7 @@ namespace DataSync.Core.Replication
                     current.Range.BaseIdEnd = current.StartSyncPoint;
                     current.StartSyncPoint = -1;
                     Log.Information("Sync finished records " + current.Range.BaseIdBegin + "-" + current.Range.BaseIdEnd);
+                    SyncRangePlanner.MergeSynced(_ranges);
                     SelectNextRange();
                 }
                 else

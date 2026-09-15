@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using DataSync.Core.Replication;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -7,73 +9,133 @@ namespace DataSync.Tests
     [TestClass]
     public class AdaptiveBatchSizeTests
     {
-        private static readonly TimeSpan Target = TimeSpan.FromSeconds(3);
+        private static readonly TimeSpan OneSecond = TimeSpan.FromSeconds(1);
 
-        private static AdaptiveBatchSize GrownToMax(int min = 20, int max = 1000)
+        private static TimeSpan Seconds(double seconds)
         {
-            var batch = new AdaptiveBatchSize(min, max, Target);
-            for (var i = 0; i < 30; i++)
+            return TimeSpan.FromSeconds(seconds);
+        }
+
+        private static RealTimeBatchSize RealTimeGrownToMax()
+        {
+            var batch = new RealTimeBatchSize(20, 1000, 5, OneSecond);
+            while (batch.Current < 1000)
             {
-                batch.OnRead(batch.Current, batch.Current, TimeSpan.FromMilliseconds(1));
+                batch.OnRead(batch.Current, batch.Current);
             }
-            Assert.AreEqual(max, batch.Current);
             return batch;
         }
 
-        [TestMethod]
-        public void StartsAtMinAndGrowsGraduallyOnFastFullReads()
+        /// <summary>A fast link: larger reads always copy more per second.</summary>
+        private static readonly Func<int, double> FastLink = rows => 0.1 + 0.001 * rows;
+
+        /// <summary>Full reads, each taking <paramref name="seconds"/> for its size; returns the size after each.</summary>
+        private static List<int> Feed(SyncBatchSize batch, Func<int, double> seconds, int reads)
         {
-            var batch = new AdaptiveBatchSize(20, 1000, Target);
-            Assert.AreEqual(20, batch.Current);
-
-            batch.OnRead(20, 20, TimeSpan.FromMilliseconds(100));
-
-            Assert.AreEqual(31, batch.Current);
-            GrownToMax();
-        }
-
-        [TestMethod]
-        public void DoesNotGrowOnShortReads()
-        {
-            var batch = new AdaptiveBatchSize(20, 1000, Target);
-
-            batch.OnRead(20, 5, TimeSpan.FromMilliseconds(10));
-            batch.OnRead(20, 0, TimeSpan.FromMilliseconds(10));
-
-            Assert.AreEqual(20, batch.Current);
-        }
-
-        [TestMethod]
-        public void SettlesWhereReadsTakeAboutTheTargetTime()
-        {
-            // A slow link: 0.5 s round trip plus 20 ms per row.
-            Func<int, TimeSpan> readTime = rows => TimeSpan.FromSeconds(0.5 + 0.02 * rows);
-            var batch = new AdaptiveBatchSize(20, 1000, Target);
-
-            for (var i = 0; i < 50; i++)
+            var sizes = new List<int>();
+            for (var i = 0; i < reads; i++)
             {
-                batch.OnRead(batch.Current, batch.Current, readTime(batch.Current));
+                batch.OnRead(batch.Current, batch.Current, Seconds(seconds(batch.Current)));
+                sizes.Add(batch.Current);
+            }
+            return sizes;
+        }
+
+        private static int Changes(List<int> sizes)
+        {
+            return Enumerable.Range(1, sizes.Count - 1).Count(i => sizes[i] != sizes[i - 1]);
+        }
+
+        [TestMethod]
+        public void RealTime_CarriesMultiplierTimesAverageNewRecordsPerPoll()
+        {
+            var batch = new RealTimeBatchSize(1, 1000, 5, OneSecond);
+            long newest = 100;
+            batch.OnNewestBaseId(newest, Seconds(0));
+
+            for (var i = 1; i <= 10; i++)
+            {
+                newest += i % 2 == 0 ? 3 : 1; // 2 per second on average
+                batch.OnNewestBaseId(newest, Seconds(i));
             }
 
-            var seconds = readTime(batch.Current).TotalSeconds;
-            Assert.IsTrue(seconds >= Target.TotalSeconds * 0.5 && seconds <= Target.TotalSeconds * 1.5,
-                $"settled at {batch.Current} rows, {seconds} s per read");
+            Assert.AreEqual(2, batch.RecordsPerSecond, 1e-9);
+            Assert.AreEqual(10, batch.Current);
         }
 
         [TestMethod]
-        public void ShrinksToFitTargetAfterSlowRead()
+        public void RealTime_AveragesTheLastTenSamples()
         {
-            var batch = GrownToMax();
+            var batch = new RealTimeBatchSize(1, 1000, 3, OneSecond);
+            long newest = 0;
+            batch.OnNewestBaseId(newest, Seconds(0));
 
-            batch.OnRead(1000, 1000, TimeSpan.FromSeconds(30));
+            for (var i = 1; i <= 10; i++)
+            {
+                newest += 20;
+                batch.OnNewestBaseId(newest, Seconds(i));
+            }
+            Assert.AreEqual(60, batch.Current);
 
-            Assert.AreEqual(100, batch.Current);
+            for (var i = 11; i <= 20; i++)
+            {
+                newest += 2;
+                batch.OnNewestBaseId(newest, Seconds(i));
+            }
+            Assert.AreEqual(6, batch.Current);
+        }
+
+        [TestMethod]
+        public void RealTime_MeasuresPerSecondAcrossLongWaitsAndIgnoresSamplesTooCloseTogether()
+        {
+            var batch = new RealTimeBatchSize(1, 1000, 5, OneSecond);
+            batch.OnNewestBaseId(0, Seconds(0));
+
+            batch.OnNewestBaseId(20, Seconds(10)); // e.g. after retry delays: still 2 per second
+            Assert.AreEqual(10, batch.Current);
+
+            batch.OnNewestBaseId(25, Seconds(10.05));
+            Assert.AreEqual(10, batch.Current);
+
+            batch.OnNewestBaseId(25, Seconds(11)); // the 5 records count here: 25 in 11 s
+            Assert.AreEqual(12, batch.Current);
+        }
+
+        [TestMethod]
+        public void RealTime_StaysAtMinWhileNothingArrives()
+        {
+            var batch = new RealTimeBatchSize(5, 1000, 5, OneSecond);
+
+            for (var i = 0; i < 5; i++)
+            {
+                batch.OnNewestBaseId(7, Seconds(i));
+                batch.OnRead(5, 0);
+            }
+
+            Assert.AreEqual(5, batch.Current);
+        }
+
+        [TestMethod]
+        public void RealTime_DoublesWhileReadsAreFullThenReturnsToArrivalRate()
+        {
+            var batch = new RealTimeBatchSize(5, 1000, 5, OneSecond);
+            batch.OnNewestBaseId(0, Seconds(0));
+            batch.OnNewestBaseId(2, Seconds(1));
+            Assert.AreEqual(10, batch.Current);
+
+            batch.OnRead(10, 10);
+            Assert.AreEqual(20, batch.Current);
+            batch.OnRead(20, 20);
+            Assert.AreEqual(40, batch.Current);
+
+            batch.OnRead(40, 7);
+            Assert.AreEqual(10, batch.Current);
         }
 
         [TestMethod]
         public void TimeoutCutsToQuarterAndOtherFailuresHalve()
         {
-            var batch = GrownToMax();
+            var batch = RealTimeGrownToMax();
 
             batch.OnReadFailed(new InvalidOperationException("wrapper", new TimeoutException()));
             Assert.AreEqual(250, batch.Current);
@@ -91,44 +153,223 @@ namespace DataSync.Tests
         [TestMethod]
         public void AfterTimeout_StaysBelowTheSizeThatTimedOutForAWhile()
         {
-            var batch = GrownToMax();
+            var batch = RealTimeGrownToMax();
             batch.OnReadFailed(new TimeoutException());
 
             for (var i = 0; i < 50; i++)
             {
-                batch.OnRead(batch.Current, batch.Current, TimeSpan.FromMilliseconds(1));
+                batch.OnRead(batch.Current, batch.Current);
             }
             Assert.AreEqual(750, batch.Current);
 
-            for (var i = 0; i < 60; i++)
+            for (var i = 0; i < 50; i++)
             {
-                batch.OnRead(batch.Current, batch.Current, TimeSpan.FromMilliseconds(1));
+                batch.OnRead(batch.Current, batch.Current);
             }
             Assert.AreEqual(1000, batch.Current);
+        }
+
+        [TestMethod]
+        public void Sync_Steps()
+        {
+            CollectionAssert.AreEqual(new[] { 5, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100, 200, 300, 400, 500 },
+                                      SyncBatchSize.BuildSteps(5, 500));
+            CollectionAssert.AreEqual(new[] { 7, 10, 20, 25 }, SyncBatchSize.BuildSteps(7, 25));
+            CollectionAssert.AreEqual(new[] { 1000 }, SyncBatchSize.BuildSteps(1000, 1000));
+        }
+
+        [TestMethod]
+        public void Sync_ClimbsToTheLimitWhileLargerReadsCopyMorePerSecond()
+        {
+            var batch = new SyncBatchSize(5, 1000);
+            Assert.AreEqual(5, batch.Current);
+
+            // One second per read whatever its size: larger reads always copy more per second.
+            Feed(batch, rows => 1, SyncBatchSize.ReadsPerMeasurement);
+            Assert.AreEqual(10, batch.Current);
+
+            Feed(batch, rows => 1, 400);
+            Assert.AreEqual(1000, batch.Current);
+        }
+
+        [TestMethod]
+        public void Sync_SettlesAroundTheStepWithTheMostRecordsPerSecond()
+        {
+            // Reads above 40 rows get much slower: 40 rows/read gives the most records per second.
+            Func<int, double> link = rows => 0.5 + 0.01 * rows + (rows > 40 ? 0.05 * (rows - 40) : 0);
+            var batch = new SyncBatchSize(5, 1000);
+
+            Feed(batch, link, 300);
+
+            for (var i = 0; i < 100; i++)
+            {
+                Feed(batch, link, 1);
+                Assert.IsTrue(batch.Current >= 30 && batch.Current <= 50, "batch size " + batch.Current);
+            }
+        }
+
+        [TestMethod]
+        public void Sync_HoldsOneSizeMostOfTheTimeDespiteNoisyReadTimes()
+        {
+            var random = new Random(1);
+            Func<int, double> link = rows => (0.5 + 0.01 * rows + (rows > 40 ? 0.05 * (rows - 40) : 0)) * (0.9 + 0.2 * random.NextDouble());
+            var batch = new SyncBatchSize(5, 1000);
+            Feed(batch, link, 300);
+
+            var changes = 0;
+            var atBest = 0;
+            for (var i = 0; i < 1000; i++)
+            {
+                var before = batch.Current;
+                Feed(batch, link, 1);
+                changes += batch.Current != before ? 1 : 0;
+                atBest += batch.Current == 40 ? 1 : 0;
+            }
+
+            // Tries (two changes each) that do not help come further and further apart.
+            Assert.IsTrue(changes <= 20, changes + " size changes in 1000 reads");
+            Assert.IsTrue(atBest >= 800, atBest + " of 1000 reads at 40 rows");
+        }
+
+        [TestMethod]
+        public void Sync_RarelyChangesSizeOnAJitteryNetwork()
+        {
+            // Read times vary by ±40% and one read in 20 takes three times as long, as on a busy WAN link.
+            var random = new Random(7);
+            Func<int, double> link = rows =>
+            {
+                var jitter = 0.6 + 0.8 * random.NextDouble();
+                var spike = random.NextDouble() < 0.05 ? 3 : 1;
+                return (0.5 + 0.01 * rows + (rows > 40 ? 0.05 * (rows - 40) : 0)) * jitter * spike;
+            };
+            var batch = new SyncBatchSize(5, 1000);
+            Feed(batch, link, 500);
+
+            var changes = 0;
+            var atBest = 0;
+            const int reads = 5000; // about 80 minutes of reads near the best size
+            for (var i = 0; i < reads; i++)
+            {
+                var before = batch.Current;
+                Feed(batch, link, 1);
+                changes += batch.Current != before ? 1 : 0;
+                atBest += batch.Current >= 30 && batch.Current <= 50 ? 1 : 0;
+            }
+
+            Assert.IsTrue(changes <= 40 && atBest >= reads * 0.9, changes + " size changes, " + atBest + " of " + reads + " reads at 30-50 rows");
+        }
+
+        [TestMethod]
+        public void Sync_StepsDownWhenReadsTakeLonger()
+        {
+            var batch = new SyncBatchSize(5, 1000);
+            Feed(batch, rows => 1, 400);
+            Assert.AreEqual(1000, batch.Current);
+
+            // The link slows down: large reads now take much longer; about 100 rows per read copies the most per second.
+            Func<int, double> slow = rows => 0.2 + rows * (double)rows / 20000;
+            Feed(batch, slow, SyncBatchSize.DefaultJudgeMeasurements - 1);
+            Assert.AreEqual(1000, batch.Current, "slow measurements are not acted on until they last");
+            Feed(batch, slow, 1);
+            Assert.AreEqual(900, batch.Current, "reads slow enough to end each measurement step down once the drop lasts");
+
+            Feed(batch, slow, 300);
+            Assert.AreEqual(100, batch.Current);
+            for (var i = 0; i < 60; i++)
+            {
+                Feed(batch, slow, 1);
+                Assert.IsTrue(batch.Current >= 90 && batch.Current <= 200, "batch size " + batch.Current);
+            }
+        }
+
+        [TestMethod]
+        public void Sync_TimeoutCutsToAStepAndStaysBelowTheSizeThatTimedOut()
+        {
+            var batch = new SyncBatchSize(5, 1000);
+            Feed(batch, rows => 1, 400);
+
+            batch.OnReadFailed(new TimeoutException());
+            Assert.AreEqual(200, batch.Current);
+
+            // For the 100 reads after the timeout the size stays below three quarters of the size that timed out.
+            for (var i = 0; i < 99; i++)
+            {
+                Feed(batch, rows => 1, 1);
+                Assert.IsTrue(batch.Current <= 700, "batch size " + batch.Current);
+            }
+            Assert.IsTrue(batch.Current > 200, "grows back after holding: " + batch.Current);
+
+            Feed(batch, rows => 1, 400);
+            Assert.AreEqual(1000, batch.Current);
+        }
+
+        [TestMethod]
+        public void Sync_JudgesATriedSizeOverTheConfiguredMeasurements()
+        {
+            var measurement = SyncBatchSize.ReadsPerMeasurement; // 1 s reads: 5 reads and 5 s
+            var quick = new SyncBatchSize(5, 1000, judgeMeasurements: 1);
+            var steady = new ReplicationSettings { MinRowLimit = 5, SyncRowLimit = 1000, SyncBatchMeasurements = 4 }.CreateSyncBatchSize();
+
+            Feed(quick, rows => 1, measurement);
+            Feed(steady, rows => 1, measurement);
+            Assert.AreEqual(10, quick.Current, "the first measurement starts trying larger sizes");
+            Assert.AreEqual(10, steady.Current);
+
+            Feed(quick, rows => 1, measurement);
+            Feed(steady, rows => 1, 3 * measurement);
+            Assert.AreEqual(20, quick.Current);
+            Assert.AreEqual(10, steady.Current, "still judging 10 rows after 3 of 4 measurements");
+
+            Feed(steady, rows => 1, measurement);
+            Assert.AreEqual(20, steady.Current);
+        }
+
+        [TestMethod]
+        public void Sync_IgnoresShortWindowsForThroughput()
+        {
+            var batch = new SyncBatchSize(5, 1000);
+
+            for (var i = 0; i < 10; i++)
+            {
+                batch.OnRead(5, 2, Seconds(0.01));
+            }
+
+            Assert.AreEqual(5, batch.Current);
         }
 
         [TestMethod]
         public void FixedWhenMinEqualsMax()
         {
-            var batch = new AdaptiveBatchSize(1000, 1000, Target);
+            var sync = new SyncBatchSize(1000, 1000);
+            sync.OnReadFailed(new TimeoutException());
+            sync.OnRead(1000, 1000, TimeSpan.FromMinutes(1));
 
-            batch.OnReadFailed(new TimeoutException());
-            batch.OnRead(1000, 1000, TimeSpan.FromMinutes(1));
+            var realTime = new RealTimeBatchSize(1000, 1000, 5, OneSecond);
+            realTime.OnReadFailed(new TimeoutException());
+            realTime.OnNewestBaseId(0, Seconds(0));
+            realTime.OnNewestBaseId(1, Seconds(10));
+            realTime.OnRead(1000, 1);
 
-            Assert.AreEqual(1000, batch.Current);
-            Assert.IsFalse(batch.IsAdaptive);
+            Assert.AreEqual(1000, sync.Current);
+            Assert.AreEqual(1000, realTime.Current);
+            Assert.IsFalse(sync.IsAdaptive);
+            Assert.IsFalse(realTime.IsAdaptive);
         }
 
         [TestMethod]
-        public void Settings_CreateBatchSize_FixedWhenAdaptiveIsOff()
+        public void Settings_CreateBatchSizes_FixedWhenAdaptiveIsOff()
         {
-            var settings = new ReplicationSettings { AdaptiveBatchSize = false, MinRowLimit = 20 };
+            var settings = new ReplicationSettings { AdaptiveBatchSize = false, MinRowLimit = 5, RealTimeRowLimit = 500, SyncRowLimit = 300 };
 
-            Assert.AreEqual(500, settings.CreateBatchSize(500).Current);
+            Assert.AreEqual(500, settings.CreateRealTimeBatchSize().Current);
+            Assert.AreEqual(300, settings.CreateSyncBatchSize().Current);
 
             settings.AdaptiveBatchSize = true;
-            Assert.AreEqual(20, settings.CreateBatchSize(500).Current);
-            Assert.AreEqual(10, settings.CreateBatchSize(10).Current);
+            Assert.AreEqual(5, settings.CreateRealTimeBatchSize().Current);
+            Assert.AreEqual(5, settings.CreateSyncBatchSize().Current);
+
+            settings.SyncRowLimit = 3;
+            Assert.AreEqual(3, settings.CreateSyncBatchSize().Current);
         }
     }
 }

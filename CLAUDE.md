@@ -28,8 +28,13 @@ assemblies. No Telerik, Serilog, Dapper, MVVM toolkits, etc. Only `DataSync.Test
     `NextBaseId`. `GapSyncReplicator` back-fills below it, newest gap first, reading backwards. `SyncRangePlanner`
     holds the pure range arithmetic. `ReplicationTask` provides the background loop, 1–60 s back-off (real-time 1–10 s with `PrioritizeLatestData`) and
     throttling. `MainViewModel` restarts the app on `FailureLimitExceeded` only when both databases answer.
-    `AdaptiveBatchSize` (DataSync-only, on by default) sizes each remote read from recent read times and failures,
-    between `MinRowLimit` and the row limit; with `AdaptiveBatchSize=false` reads are fixed at the row limit as in DDRREP.
+    `AdaptiveBatchSize` (DataSync-only, on by default) sizes each remote read between `MinRowLimit` and the row limit;
+    with `AdaptiveBatchSize=false` reads are fixed at the row limit as in DDRREP. `RealTimeBatchSize` carries
+    `RealTimeBatchMultiplier` polls' worth of new records at the average arrival rate (newest remote BaseID sampled
+    over the last 10 polls) and doubles while reads come back full. `SyncBatchSize` holds a step (5, 10, 20 … 100, 200 …)
+    and after 10 measurements (≥5 reads and ≥5 s each) tries a neighbouring step, keeping it only when BaseIDs copied
+    per second rise by 10% over `SyncBatchMeasurements` measurements; each try that doesn't help doubles the wait (up to
+    80); a 20% drop lasting `SyncBatchMeasurements` measurements tries smaller steps. Both shrink after failed reads (base `AdaptiveBatchSize`).
     `PrioritizeLatestData` (DataSync-only, on by default) puts the newest data first: when more rows are waiting than
     one read carries, `RealTimeReplicator` skips to the newest rows and raises `RangeSkipped`; the engine passes the
     range to `GapSyncReplicator.AddGap`, which wakes the sync task and copies it before older ranges, newest first.

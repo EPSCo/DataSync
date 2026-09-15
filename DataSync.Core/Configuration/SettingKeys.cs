@@ -27,7 +27,8 @@ namespace DataSync.Core.Configuration
         // DataSync only (not in DDRREP).
         public const string AdaptiveBatchSize = "AdaptiveBatchSize";
         public const string MinRowLimit = "MinRowLimit";
-        public const string TargetBatchSeconds = "TargetBatchSeconds";
+        public const string RealTimeBatchMultiplier = "RealTimeBatchMultiplier";
+        public const string SyncBatchMeasurements = "SyncBatchMeasurements";
         public const string CommandTimeout = "CommandTimeout";
         public const string PrioritizeLatestData = "PrioritizeLatestData";
         public const string LogLevel = "LogLevel";

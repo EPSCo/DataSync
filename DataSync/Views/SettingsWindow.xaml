@@ -125,10 +125,11 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0" Text="Adaptive batch size" Style="{StaticResource FieldLabel}"
-                                   ToolTip="Size each read from recent read times, up to the row limits. Off: always read the row limits" />
+                                   ToolTip="Real-time: size reads from the rate new records arrive. Sync: size reads for the most records per second. Off: always read the row limits" />
                         <CheckBox Grid.Row="0" Grid.Column="1" x:Name="AdaptiveCheckBox" IsChecked="{Binding AdaptiveBatchSize}" />
 
                         <TextBlock Grid.Row="1" Text="Minimum row limit" Style="{StaticResource FieldLabel}"
@@ -136,14 +137,19 @@
                         <TextBox Grid.Row="1" Grid.Column="1" IsEnabled="{Binding IsChecked, ElementName=AdaptiveCheckBox}"
                                  Text="{Binding MinRowLimit, UpdateSourceTrigger=PropertyChanged}" />
 
-                        <TextBlock Grid.Row="2" Text="Target read time (s)" Style="{StaticResource FieldLabel}"
-                                   ToolTip="Seconds one remote read should take when adaptive" />
+                        <TextBlock Grid.Row="2" Text="Real-time multiplier" Style="{StaticResource FieldLabel}"
+                                   ToolTip="Polls' worth of new records one real-time read carries, at the average rate of the last 10 samples (2 records/s × 5 = 10 rows)" />
                         <TextBox Grid.Row="2" Grid.Column="1" IsEnabled="{Binding IsChecked, ElementName=AdaptiveCheckBox}"
-                                 Text="{Binding TargetBatchSeconds, UpdateSourceTrigger=PropertyChanged}" />
+                                 Text="{Binding RealTimeBatchMultiplier, UpdateSourceTrigger=PropertyChanged}" />
 
-                        <TextBlock Grid.Row="3" Text="Command timeout (s)" Style="{StaticResource FieldLabel}"
+                        <TextBlock Grid.Row="3" Text="Sync measurements" Style="{StaticResource FieldLabel}"
+                                   ToolTip="Measurements (each at least 5 reads and 5 s) a new sync batch size is judged over before it is kept. More: steadier sizes, slower reactions" />
+                        <TextBox Grid.Row="3" Grid.Column="1" IsEnabled="{Binding IsChecked, ElementName=AdaptiveCheckBox}"
+                                 Text="{Binding SyncBatchMeasurements, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="4" Text="Command timeout (s)" Style="{StaticResource FieldLabel}"
                                    ToolTip="Seconds before a database read or save is abandoned as timed out" />
-                        <TextBox Grid.Row="3" Grid.Column="1" Text="{Binding CommandTimeout, UpdateSourceTrigger=PropertyChanged}" />
+                        <TextBox Grid.Row="4" Grid.Column="1" Text="{Binding CommandTimeout, UpdateSourceTrigger=PropertyChanged}" />
                     </Grid>
                 </StackPanel>
             </Border>

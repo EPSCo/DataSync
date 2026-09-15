@@ -53,6 +53,18 @@ namespace DataSync.Tests
         }
 
         [TestMethod]
+        public void Normalize_MergesNeighbouringSyncedRanges()
+        {
+            // The remote has no BaseIDs 21-30 and 51-60, so it reports three ranges, all present locally.
+            var built = SyncRangePlanner.Build(new[] { R(1, 20), R(31, 50), R(61, 80), R(81, 100) },
+                                               new[] { R(1, 20), R(31, 50), R(61, 80) });
+
+            var ranges = SyncRangePlanner.Normalize(built, 101);
+
+            Assert.AreEqual("Synced[1-80] NotSync[81-100] RealTime[101-101]", Describe(ranges));
+        }
+
+        [TestMethod]
         public void FindNextRangeIndex_PicksNewestNotSyncRange()
         {
             var ranges = SyncRangePlanner.Build(new[] { R(1, 100) }, new[] { R(21, 40), R(61, 80) });

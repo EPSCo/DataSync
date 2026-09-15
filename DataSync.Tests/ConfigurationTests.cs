@@ -18,8 +18,9 @@ namespace DataSync.Tests
                 SyncUpdateInterval = "0",
                 SyncRowLimit = " 500 ",
                 AdaptiveBatchSize = true,
-                MinRowLimit = "20",
-                TargetBatchSeconds = "3",
+                MinRowLimit = "5",
+                RealTimeBatchMultiplier = "5",
+                SyncBatchMeasurements = "3",
                 CommandTimeout = "60",
                 GapCheckInterval = "10",
                 MaxRowsPerSecond = "0",
@@ -59,8 +60,8 @@ namespace DataSync.Tests
             StringAssert.StartsWith(settings.Validate(), "Command timeout");
 
             settings = ValidSettings();
-            settings.TargetBatchSeconds = "60";
-            StringAssert.StartsWith(settings.Validate(), "Target read time must be less");
+            settings.RealTimeBatchMultiplier = "0";
+            StringAssert.StartsWith(settings.Validate(), "Real-time batch multiplier");
 
             settings = ValidSettings();
             settings.LogLevel = "Verbose";

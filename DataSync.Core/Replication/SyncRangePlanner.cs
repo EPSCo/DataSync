@@ -84,8 +84,27 @@ namespace DataSync.Core.Replication
                 }
             }
 
+            MergeSynced(result);
             result.Add(Create(boundary, boundary, -1, RangeStatus.RealTime));
             return result;
+        }
+
+        /// <summary>
+        /// Joins neighbouring Synced ranges (in a list ordered by BaseIdBegin) into one. BaseIDs between them are
+        /// missing on the remote too, so there is nothing to copy there and one row is shown instead of many.
+        /// </summary>
+        public static void MergeSynced(List<SyncRange> ranges)
+        {
+            for (var i = ranges.Count - 1; i > 0; i--)
+            {
+                var previous = ranges[i - 1];
+                var item = ranges[i];
+                if (previous.Status == RangeStatus.Synced && item.Status == RangeStatus.Synced)
+                {
+                    previous.Range.BaseIdEnd = System.Math.Max(previous.Range.BaseIdEnd, item.Range.BaseIdEnd);
+                    ranges.RemoveAt(i);
+                }
+            }
         }
 
         /// <summary>

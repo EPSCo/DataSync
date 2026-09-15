@@ -19,16 +19,23 @@ namespace DataSync.Core.Replication
         public int SyncRowLimit { get; set; } = 1000;
 
         /// <summary>
-        /// Sizes each remote read between <see cref="MinRowLimit"/> and the row limit from recent read times, aiming at
-        /// <see cref="TargetBatchTime"/>. Off: every read uses the row limit, as DDRREP did.
+        /// Sizes each remote read between <see cref="MinRowLimit"/> and the row limit: real-time from the rate new records
+        /// arrive (<see cref="RealTimeBatchSize"/>), sync for the most records per second (<see cref="SyncBatchSize"/>).
+        /// Off: every read uses the row limit, as DDRREP did.
         /// </summary>
         public bool AdaptiveBatchSize { get; set; } = true;
 
         /// <summary>Smallest read size when adaptive; also the size of the first read.</summary>
-        public int MinRowLimit { get; set; } = 20;
+        public int MinRowLimit { get; set; } = 5;
 
-        /// <summary>How long one remote read should take when adaptive.</summary>
-        public TimeSpan TargetBatchTime { get; set; } = TimeSpan.FromSeconds(3);
+        /// <summary>Polls' worth of new records (at the recent average rate) one adaptive real-time read carries.</summary>
+        public int RealTimeBatchMultiplier { get; set; } = 5;
+
+        /// <summary>
+        /// Measurements (each at least 5 reads and 5 s) an adaptive sync read size is judged over before it is kept, or
+        /// a drop in throughput before smaller sizes are tried. More: steadier sizes, slower reactions.
+        /// </summary>
+        public int SyncBatchMeasurements { get; set; } = SyncBatchSize.DefaultJudgeMeasurements;
 
         /// <summary>SQL command timeout for replication reads and writes.</summary>
         public TimeSpan CommandTimeout { get; set; } = TimeSpan.FromSeconds(60);
@@ -64,8 +71,9 @@ namespace DataSync.Core.Replication
                 GapCheckInterval       = TimeSpan.FromMinutes(Math.Max(1, AppSettings.GetInt(SettingKeys.GapCheckInterval, 10))),
                 FailureLimit           = Math.Max(0, AppSettings.GetInt(SettingKeys.TimeoutCounterLimit, 10)),
                 AdaptiveBatchSize      = AppSettings.GetBool(SettingKeys.AdaptiveBatchSize, true),
-                MinRowLimit            = Math.Max(1, AppSettings.GetInt(SettingKeys.MinRowLimit, 20)),
-                TargetBatchTime        = TimeSpan.FromSeconds(Math.Max(1, AppSettings.GetInt(SettingKeys.TargetBatchSeconds, 3))),
+                MinRowLimit            = Math.Max(1, AppSettings.GetInt(SettingKeys.MinRowLimit, 5)),
+                RealTimeBatchMultiplier = Math.Max(1, AppSettings.GetInt(SettingKeys.RealTimeBatchMultiplier, 5)),
+                SyncBatchMeasurements  = Math.Max(1, AppSettings.GetInt(SettingKeys.SyncBatchMeasurements, SyncBatchSize.DefaultJudgeMeasurements)),
                 CommandTimeout         = TimeSpan.FromSeconds(Math.Max(5, AppSettings.GetInt(SettingKeys.CommandTimeout, 60))),
                 PrioritizeLatestData   = AppSettings.GetBool(SettingKeys.PrioritizeLatestData, true)
             };
@@ -83,7 +91,8 @@ namespace DataSync.Core.Replication
                    ", PrioritizeLatestData=" + PrioritizeLatestData +
                    ", AdaptiveBatchSize=" + AdaptiveBatchSize +
                    ", MinRowLimit=" + MinRowLimit +
-                   ", TargetBatchTime=" + Seconds(TargetBatchTime) +
+                   ", RealTimeBatchMultiplier=" + RealTimeBatchMultiplier +
+                   ", SyncBatchMeasurements=" + SyncBatchMeasurements +
                    ", CommandTimeout=" + Seconds(CommandTimeout) +
                    ", MaxRowsPerSecond=" + MaxRowsPerSecond +
                    ", GapCheckInterval=" + Seconds(GapCheckInterval) +
@@ -95,12 +104,17 @@ namespace DataSync.Core.Replication
             return time.TotalSeconds.ToString(CultureInfo.InvariantCulture) + " s";
         }
 
-        /// <summary>
-        /// The read-size controller for a task with the given row limit: adaptive from MinRowLimit, or fixed at the limit.
-        /// </summary>
-        public AdaptiveBatchSize CreateBatchSize(int rowLimit)
+        /// <summary>The real-time read size: adaptive from MinRowLimit, or fixed at RealTimeRowLimit.</summary>
+        public RealTimeBatchSize CreateRealTimeBatchSize()
         {
-            return new AdaptiveBatchSize(AdaptiveBatchSize ? MinRowLimit : rowLimit, rowLimit, TargetBatchTime);
+            return new RealTimeBatchSize(AdaptiveBatchSize ? MinRowLimit : RealTimeRowLimit, RealTimeRowLimit,
+                                         RealTimeBatchMultiplier, RealTimeUpdateInterval);
+        }
+
+        /// <summary>The sync read size: adaptive from MinRowLimit, or fixed at SyncRowLimit.</summary>
+        public SyncBatchSize CreateSyncBatchSize()
+        {
+            return new SyncBatchSize(AdaptiveBatchSize ? MinRowLimit : SyncRowLimit, SyncRowLimit, SyncBatchMeasurements);
         }
     }
 }

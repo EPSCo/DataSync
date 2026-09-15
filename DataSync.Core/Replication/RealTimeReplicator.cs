@@ -20,8 +20,12 @@ namespace DataSync.Core.Replication
         /// <summary>Retry cap with PrioritizeLatestData, so new data flows again soon after the link returns.</summary>
         public static readonly TimeSpan LatestFirstMaxRetryDelay = TimeSpan.FromSeconds(10);
 
+        /// <summary>Monotonic time for the arrival-rate samples.</summary>
+        private static readonly Stopwatch Clock = Stopwatch.StartNew();
+
         private readonly IProcessDataStore _remote;
         private readonly IProcessDataStore _local;
+        private readonly RealTimeBatchSize _batch;
         private long _nextBaseId = 1;
         private long _lastLocalBaseId;
         private long _lastLocalRecordTicks; // 0 = unknown
@@ -32,10 +36,17 @@ namespace DataSync.Core.Replication
         private bool _behindReported;
 
         public RealTimeReplicator(IProcessDataStore remote, IProcessDataStore local, ReplicationSettings settings, Action<string> report)
-            : base("RealTime", settings, settings.RealTimeRowLimit, report)
+            : this(remote, local, settings, report, settings.CreateRealTimeBatchSize())
+        {
+        }
+
+        private RealTimeReplicator(IProcessDataStore remote, IProcessDataStore local, ReplicationSettings settings,
+                                   Action<string> report, RealTimeBatchSize batch)
+            : base("RealTime", settings, batch, report)
         {
             _remote = remote;
             _local = local;
+            _batch = batch;
         }
 
         /// <summary>
@@ -93,13 +104,12 @@ namespace DataSync.Core.Replication
         public override TimeSpan RunIteration()
         {
             var stopwatch = Stopwatch.StartNew();
-            var requested = Batch.Current;
 
             if (Settings.PrioritizeLatestData && _checkNewest)
             {
                 try
                 {
-                    SkipAheadIfBehind(requested);
+                    SkipAheadIfBehind();
                 }
                 catch (Exception ex)
                 {
@@ -107,6 +117,7 @@ namespace DataSync.Core.Replication
                 }
             }
 
+            var requested = Batch.Current;
             List<TProcessData> rows;
             try
             {
@@ -120,7 +131,26 @@ namespace DataSync.Core.Replication
                 return OnReadFailure("GetRealTimeDataFromRemoteDatabase", ex);
             }
             var readTime = stopwatch.Elapsed;
-            RecordRead(requested, rows.Count, readTime);
+            RecordRead(readTime);
+
+            TProcessData newest = null;
+            foreach (var row in rows)
+            {
+                if (newest == null || row.BaseID > newest.BaseID)
+                {
+                    newest = row;
+                }
+            }
+
+            AdjustBatch(() =>
+            {
+                _batch.OnRead(requested, rows.Count);
+                if (rows.Count < requested)
+                {
+                    // Not full: the remote had nothing newer, so this is its newest record.
+                    _batch.OnNewestBaseId(Math.Max(NextBaseId - 1, newest?.BaseID ?? 0), Clock.Elapsed);
+                }
+            }, () => "read " + rows.Count + " of " + requested + " rows, new records " + FormatRate(_batch.RecordsPerSecond));
 
             try
             {
@@ -133,17 +163,8 @@ namespace DataSync.Core.Replication
                 return OnFailure("SaveRealTimeDataToLocalDatabase", ex);
             }
 
-            if (rows.Count > 0)
+            if (newest != null)
             {
-                var newest = rows[0];
-                foreach (var row in rows)
-                {
-                    if (row.BaseID > newest.BaseID)
-                    {
-                        newest = row;
-                    }
-                }
-
                 if (newest.BaseID >= LastLocalBaseId)
                 {
                     SetLastLocal(newest);
@@ -170,12 +191,16 @@ namespace DataSync.Core.Replication
         }
 
         /// <summary>
-        /// When more rows are waiting than one read of <paramref name="batchSize"/> carries, moves to the newest
-        /// <paramref name="batchSize"/> rows and raises <see cref="RangeSkipped"/> for the rows in between.
+        /// Samples the newest remote BaseID for the batch size. When more rows are waiting than one read carries, moves to
+        /// the newest batch of rows and raises <see cref="RangeSkipped"/> for the rows in between.
         /// </summary>
-        private void SkipAheadIfBehind(int batchSize)
+        private void SkipAheadIfBehind()
         {
             var newest = _remote.GetLastRecord().BaseID;
+            AdjustBatch(() => _batch.OnNewestBaseId(newest, Clock.Elapsed),
+                        () => "new records " + FormatRate(_batch.RecordsPerSecond));
+
+            var batchSize = Batch.Current;
             var next = NextBaseId;
             var waiting = newest - next + 1;
             if (waiting <= batchSize)

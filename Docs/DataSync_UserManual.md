@@ -85,9 +85,12 @@ The files are bound to the machine's CPU. If they were created for another machi
   values are checked, saved to `DataSync.exe.config` and applied after a restart, which DataSync offers to do.
   Saving needs write access to the application folder.
 - **Batch** (on each task): how many rows the next remote read asks for, and the recent copy rate. With adaptive
-  batch size on (the default), reads start small and grow while they finish quickly, and shrink after slow reads,
-  failures or timeouts. This keeps transfers steady on slow or high-latency networks. Turn it off in Settings to always
-  read the row limits.
+  batch size on (the default), Real-Time reads carry a few seconds' worth of new records at the recent arrival rate
+  (`RealTimeBatchMultiplier`, e.g. 2 records/s × 5 = 10 rows) and grow while more are waiting. Sync reads use steps
+  (5, 10, 20, 30 … 100, 200 …): a size is kept while it copies well, a neighbouring step is tried now and then
+  and kept only if it copies clearly more records per second over `SyncBatchMeasurements` measurements, tries that
+  don't help are spaced further apart, and smaller steps are tried when reads stay much slower for as long. Both shrink after failures or timeouts. Turn it off in Settings to always read the row
+  limits.
 - **Latest data first** (`PrioritizeLatestData`, on by default): the newest data always comes first. After a network
   outage, or when the link is too slow to keep up, the Real-Time task jumps to the newest records (status
   *Catching up*) instead of copying the backlog oldest-first. The records it skipped are handed to the Sync task at
@@ -106,9 +109,10 @@ The files are bound to the machine's CPU. If they were created for another machi
 | `RigName` | Rig name shown in the header |
 | `RealTimeUpdateInterval` | Seconds between real-time reads once caught up |
 | `RealTimeRowLimit` / `SyncRowLimit` | Maximum rows per real-time read / per sync batch (every read when `AdaptiveBatchSize` is `false`) |
-| `AdaptiveBatchSize` | `true` (default): size each read from recent read times, between `MinRowLimit` and the row limits |
-| `MinRowLimit` | Smallest adaptive read size, and the size of the first read |
-| `TargetBatchSeconds` | Seconds one remote read should take when adaptive (less than `CommandTimeout`) |
+| `AdaptiveBatchSize` | `true` (default): size each read between `MinRowLimit` and the row limits: real-time from the rate new records arrive, sync for the most records per second |
+| `MinRowLimit` | Smallest adaptive read size, and the size of the first read (default 5) |
+| `RealTimeBatchMultiplier` | Polls' worth of new records one adaptive real-time read carries (default 5: 2 records/s × 5 = 10 rows) |
+| `SyncBatchMeasurements` | Measurements (each at least 5 reads and 5 seconds) a new sync batch size is judged over (default 3); raise it if the sync batch size changes too often |
 | `CommandTimeout` | Seconds before a database read or save is abandoned as timed out (minimum 5) |
 | `PrioritizeLatestData` | `true` (default): newest records first, skipped records back-filled newest first; `false`: catch up oldest-first, as DDRREP did |
 | `SyncUpdateInterval` | Seconds to pause between sync batches |

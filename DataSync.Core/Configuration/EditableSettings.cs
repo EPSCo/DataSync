@@ -32,9 +32,8 @@ namespace DataSync.Core.Configuration
         public bool PrioritizeLatestData { get; set; }
         public bool AdaptiveBatchSize { get; set; }
         public string MinRowLimit { get; set; }
-
-        /// <summary>Seconds.</summary>
-        public string TargetBatchSeconds { get; set; }
+        public string RealTimeBatchMultiplier { get; set; }
+        public string SyncBatchMeasurements { get; set; }
 
         /// <summary>Seconds.</summary>
         public string CommandTimeout { get; set; }
@@ -69,7 +68,8 @@ namespace DataSync.Core.Configuration
                 PrioritizeLatestData   = replication.PrioritizeLatestData,
                 AdaptiveBatchSize      = replication.AdaptiveBatchSize,
                 MinRowLimit            = replication.MinRowLimit.ToString(Invariant),
-                TargetBatchSeconds     = ((long)replication.TargetBatchTime.TotalSeconds).ToString(Invariant),
+                RealTimeBatchMultiplier = replication.RealTimeBatchMultiplier.ToString(Invariant),
+                SyncBatchMeasurements  = replication.SyncBatchMeasurements.ToString(Invariant),
                 CommandTimeout         = ((long)replication.CommandTimeout.TotalSeconds).ToString(Invariant),
                 GapCheckInterval       = ((long)replication.GapCheckInterval.TotalMinutes).ToString(Invariant),
                 MaxRowsPerSecond       = replication.MaxRowsPerSecond.ToString(Invariant),
@@ -98,9 +98,9 @@ namespace DataSync.Core.Configuration
                    ?? CheckInt(SyncUpdateInterval, 0, "Sync pause between batches")
                    ?? CheckInt(SyncRowLimit, 1, "Sync row limit")
                    ?? CheckInt(MinRowLimit, 1, "Minimum row limit")
-                   ?? CheckInt(TargetBatchSeconds, 1, "Target read time")
+                   ?? CheckInt(RealTimeBatchMultiplier, 1, "Real-time batch multiplier")
+                   ?? CheckInt(SyncBatchMeasurements, 1, "Sync batch measurements")
                    ?? CheckInt(CommandTimeout, 5, "Command timeout")
-                   ?? CheckTargetBelowTimeout()
                    ?? CheckInt(GapCheckInterval, 1, "Gap check interval")
                    ?? CheckInt(MaxRowsPerSecond, 0, "Max rows per second")
                    ?? CheckInt(TimeoutCounterLimit, 0, "Failures before restart")
@@ -126,7 +126,8 @@ namespace DataSync.Core.Configuration
                 [SettingKeys.PrioritizeLatestData]   = PrioritizeLatestData ? "true" : "false",
                 [SettingKeys.AdaptiveBatchSize]      = AdaptiveBatchSize ? "true" : "false",
                 [SettingKeys.MinRowLimit]            = NormalizeInt(MinRowLimit),
-                [SettingKeys.TargetBatchSeconds]     = NormalizeInt(TargetBatchSeconds),
+                [SettingKeys.RealTimeBatchMultiplier] = NormalizeInt(RealTimeBatchMultiplier),
+                [SettingKeys.SyncBatchMeasurements]  = NormalizeInt(SyncBatchMeasurements),
                 [SettingKeys.CommandTimeout]         = NormalizeInt(CommandTimeout),
                 [SettingKeys.GapCheckInterval]       = NormalizeInt(GapCheckInterval),
                 [SettingKeys.MaxRowsPerSecond]       = NormalizeInt(MaxRowsPerSecond),
@@ -166,14 +167,6 @@ namespace DataSync.Core.Configuration
             return long.TryParse(value?.Trim(), NumberStyles.Integer, Invariant, out var number) && number >= minimum
                 ? null
                 : name + " must be a whole number of at least " + minimum + ".";
-        }
-
-        // Call after both values are known to be valid numbers.
-        private string CheckTargetBelowTimeout()
-        {
-            return int.Parse(TargetBatchSeconds.Trim(), NumberStyles.Integer, Invariant) < int.Parse(CommandTimeout.Trim(), NumberStyles.Integer, Invariant)
-                ? null
-                : "Target read time must be less than the command timeout.";
         }
 
         private string CheckLogDirectory()

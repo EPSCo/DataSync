@@ -37,12 +37,12 @@ namespace DataSync.Core.Replication
         private TimeSpan _summaryMaxReadTime;
         private string _lastFailure;
 
-        /// <param name="rowLimit">The task's maximum rows per remote read.</param>
-        protected ReplicationTask(string name, ReplicationSettings settings, int rowLimit, Action<string> report)
+        /// <param name="batch">Sizes the task's remote reads.</param>
+        protected ReplicationTask(string name, ReplicationSettings settings, AdaptiveBatchSize batch, Action<string> report)
         {
             _name = name;
             Settings = settings;
-            Batch = settings.CreateBatchSize(rowLimit);
+            Batch = batch;
             _report = report;
         }
 
@@ -188,9 +188,9 @@ namespace DataSync.Core.Replication
         }
 
         /// <summary>
-        /// Feeds a successful remote read to <see cref="Batch"/>. <paramref name="covered"/> is rows (or BaseIDs) read.
+        /// Counts a successful remote read for the periodic summary.
         /// </summary>
-        protected void RecordRead(int requested, int covered, TimeSpan elapsed)
+        protected void RecordRead(TimeSpan elapsed)
         {
             _summaryReads++;
             _summaryReadTime += elapsed;
@@ -198,10 +198,19 @@ namespace DataSync.Core.Replication
             {
                 _summaryMaxReadTime = elapsed;
             }
+        }
 
+        /// <summary>
+        /// Runs <paramref name="adjust"/>, which feeds <see cref="Batch"/>, and logs a size change at Debug with the reason.
+        /// </summary>
+        protected void AdjustBatch(Action adjust, Func<string> reason)
+        {
             var before = Batch.Current;
-            Batch.OnRead(requested, covered, elapsed);
-            LogBatchChange(before, "a read of " + covered + " took " + FormatSeconds(elapsed));
+            adjust();
+            if (Batch.Current != before)
+            {
+                Log.Debug(_name + " batch size changed from " + before + " to " + Batch.Current + " rows: " + reason());
+            }
         }
 
         /// <summary>
@@ -211,7 +220,11 @@ namespace DataSync.Core.Replication
         {
             var before = Batch.Current;
             Batch.OnReadFailed(ex);
-            LogBatchChange(before, AdaptiveBatchSize.IsTimeout(ex) ? "a read timed out" : "a read failed");
+            if (Batch.Current < before)
+            {
+                Log.Information(_name + " batch size reduced from " + before + " to " + Batch.Current + " rows: " +
+                                (AdaptiveBatchSize.IsTimeout(ex) ? "a read timed out" : "a read failed"));
+            }
             return OnFailure(operation, ex);
         }
 
@@ -225,17 +238,9 @@ namespace DataSync.Core.Replication
             return time.TotalSeconds.ToString("0.00", CultureInfo.InvariantCulture) + " s";
         }
 
-        private void LogBatchChange(int before, string reason)
+        protected static string FormatRate(double perSecond)
         {
-            var after = Batch.Current;
-            if (after < before)
-            {
-                Log.Information(_name + " batch size reduced from " + before + " to " + after + " rows: " + reason);
-            }
-            else if (after > before)
-            {
-                Log.Debug(_name + " batch size increased from " + before + " to " + after + " rows");
-            }
+            return perSecond.ToString("0.0", CultureInfo.InvariantCulture) + "/s";
         }
 
         private void LogSummary()

@@ -11,11 +11,14 @@ namespace DataSync.Tests
     {
         private static readonly TimeSpan GapCheckInterval = TimeSpan.FromMinutes(10);
 
-        private static GapSyncReplicator Create(InMemoryProcessDataStore remote, InMemoryProcessDataStore local, long boundary, int rowLimit = 10)
+        // Most tests check the windows at a fixed size; the adaptive test turns it on.
+        private static GapSyncReplicator Create(InMemoryProcessDataStore remote, InMemoryProcessDataStore local, long boundary,
+                                                int rowLimit = 10, bool adaptive = false)
         {
             var settings = new ReplicationSettings
             {
                 SyncRowLimit = rowLimit,
+                AdaptiveBatchSize = adaptive,
                 SyncUpdateInterval = TimeSpan.Zero,
                 MaxRowsPerSecond = 0,
                 GapCheckInterval = GapCheckInterval
@@ -64,7 +67,34 @@ namespace DataSync.Tests
 
             CollectionAssert.AreEqual(remote.BaseIds, local.BaseIds);
             Assert.AreEqual(-1, replicator.NextBaseId);
-            Assert.IsTrue(replicator.GetRangesSnapshot().All(r => r.Status == RangeStatus.Synced || r.Status == RangeStatus.RealTime));
+            Assert.AreEqual("Synced[1-100] RealTime[101-101]",
+                            string.Join(" ", replicator.GetRangesSnapshot().Select(r => $"{r.Status}[{r.Range.BaseIdBegin}-{r.Range.BaseIdEnd}]")));
+        }
+
+        [TestMethod]
+        public void AddGap_FinishedSkippedRangeJoinsSyncedRanges()
+        {
+            var remote = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 100));
+            var local = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 100));
+            long boundary = 101;
+            var settings = new ReplicationSettings
+            {
+                SyncRowLimit = 10,
+                AdaptiveBatchSize = false,
+                SyncUpdateInterval = TimeSpan.Zero,
+                MaxRowsPerSecond = 0,
+                GapCheckInterval = GapCheckInterval
+            };
+            var replicator = new GapSyncReplicator(remote, local, () => boundary, settings, message => { });
+            RunUntilIdle(replicator);
+
+            remote.Add(InMemoryProcessDataStore.Ids(101, 200));
+            local.Add(InMemoryProcessDataStore.Ids(191, 200));
+            boundary = 201;
+            replicator.AddGap(new BaseIdRange { BaseIdBegin = 101, BaseIdEnd = 190 });
+            RunUntilIdle(replicator);
+
+            Assert.AreEqual(1, replicator.GetRangesSnapshot().Count(r => r.Status == RangeStatus.Synced));
         }
 
         [TestMethod]
@@ -153,10 +183,10 @@ namespace DataSync.Tests
         {
             var remote = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 3000));
             var local = new InMemoryProcessDataStore();
-            var replicator = Create(remote, local, boundary: 3001, rowLimit: 1000);
+            var replicator = Create(remote, local, boundary: 3001, rowLimit: 1000, adaptive: true);
             remote.ReadTimeoutAboveRows = 100;
 
-            RunUntilIdle(replicator, maxIterations: 500);
+            RunUntilIdle(replicator, maxIterations: 1000);
 
             CollectionAssert.AreEqual(remote.BaseIds, local.BaseIds);
             Assert.IsTrue(replicator.BatchSize <= 100, $"batch size {replicator.BatchSize}");
