@@ -1,0 +1,38 @@
+<Window x:Class="DataSync.Views.LoginWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Login"
+        Width="400" SizeToContent="Height"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterScreen"
+        Icon="/Resources/app.ico"
+        FontFamily="Segoe UI" FontSize="13"
+        Foreground="{StaticResource TextBrush}"
+        Background="{StaticResource SurfaceBrush}">
+    <StackPanel>
+        <Border Background="{StaticResource HeaderBrush}" Padding="24,20">
+            <TextBlock x:Name="HeaderText" Foreground="White" FontSize="20" FontWeight="SemiBold" />
+        </Border>
+
+        <StackPanel Margin="24,20,24,12">
+            <TextBlock Text="Username" Foreground="{StaticResource MutedTextBrush}" Margin="0,0,0,4" />
+            <TextBox x:Name="UserNameBox" />
+
+            <TextBlock Text="Password" Foreground="{StaticResource MutedTextBrush}" Margin="0,12,0,4" />
+            <PasswordBox x:Name="PasswordBox" />
+
+            <CheckBox x:Name="RememberCheckBox" Content="Remember me" Margin="0,12,0,0" />
+
+            <TextBlock x:Name="ErrorText" Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap" Margin="0,12,0,0" Visibility="Collapsed" />
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
+                <Button Content="Cancel" IsCancel="True" MinWidth="90" Margin="0,0,8,0" />
+                <Button x:Name="LoginButton" Content="Login" IsDefault="True" MinWidth="90"
+                        Style="{StaticResource PrimaryButton}" Click="LoginButton_Click" />
+            </StackPanel>
+        </StackPanel>
+
+        <TextBlock x:Name="CopyrightText" FontSize="11" Foreground="{StaticResource MutedTextBrush}"
+                   HorizontalAlignment="Center" TextWrapping="Wrap" Margin="16,0,16,14" />
+    </StackPanel>
+</Window>

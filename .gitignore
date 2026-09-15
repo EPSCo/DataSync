@@ -1,0 +1,17 @@
+## Build output
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+TestResults/
+
+## Visual Studio
+.vs/
+*.user
+*.suo
+*.userprefs
+
+## Runtime files that must never be committed
+*.eps
+PW.txt
+logs/

@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- No NuGet packages: only .NET Framework assemblies. -->
+  <PropertyGroup>
+    <RootNamespace>DataSync.Core</RootNamespace>
+    <AssemblyName>DataSync.Core</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Configuration" />
+    <Reference Include="System.Management" />
+  </ItemGroup>
+
+</Project>
