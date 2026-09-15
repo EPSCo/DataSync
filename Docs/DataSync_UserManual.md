@@ -80,6 +80,9 @@ The files are bound to the machine's CPU. If they were created for another machi
 - **Test Remote / Local Connection**: checks a database connection.
 - **Clear Local Data**: asks for the daily password, stops replication, empties the local run-time tables and
   restarts.
+- **Settings** (top-right of the header): edits the rig name, replication tuning and logging settings below. The
+  values are checked, saved to `DataSync.exe.config` and applied after a restart, which DataSync offers to do.
+  Saving needs write access to the application folder.
 - If a task fails too many times in a row (`TimeoutCounterLimit`), DataSync restarts itself.
 
 ## Configuration (`DataSync.exe.config`)

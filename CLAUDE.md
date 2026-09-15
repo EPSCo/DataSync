@@ -33,6 +33,10 @@ assemblies. No Telerik, Serilog, Dapper, MVVM toolkits, etc. Only `DataSync.Test
   - `Security\`: DES `Encryption` (must stay byte-compatible with DDUtility), `CredentialStore` (`PW.txt`),
     `ClearDataPassword` (date-based).
   - `Logging\Log`: static rolling file logger configured from App.config; never throws.
+  - `Configuration\`: `SettingKeys` (App.config key names), `AppSettings` (typed reads), `EditableSettings`
+    (load, validate and save for the Settings dialog) and `ConfigFile` (edits `<appSettings>` in the .config XML
+    in place, keeping comments). Settings are read at startup, so saved changes apply after a restart. A new
+    user-editable key needs a property and validation in `EditableSettings` and a field in `SettingsWindow.xaml`.
 - `DataSync` (WPF)
   - `App.xaml.cs`: startup sequence (logger → splash + `StartupChecks` → auto-login from `PW.txt` or `LoginWindow`
     → `MainWindow`) and `App.Restart()`.

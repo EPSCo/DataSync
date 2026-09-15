@@ -13,8 +13,14 @@ namespace DataSync.Infrastructure
 
         void ShowError(string message, string title);
 
+        /// <summary>Yes/No question; true for Yes.</summary>
+        bool Confirm(string message, string title);
+
         /// <summary>Asks for the clear-data password; true when it was entered correctly.</summary>
         bool ConfirmClearData();
+
+        /// <summary>Shows the Settings dialog; true when settings were saved.</summary>
+        bool EditSettings();
 
         void RestartApplication();
     }
@@ -31,9 +37,24 @@ namespace DataSync.Infrastructure
             Show(message, title, MessageBoxImage.Error);
         }
 
+        public bool Confirm(string message, string title)
+        {
+            var owner = ActiveWindow();
+            var result = owner != null
+                ? MessageBox.Show(owner, message, title, MessageBoxButton.YesNo, MessageBoxImage.Question)
+                : MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question);
+            return result == MessageBoxResult.Yes;
+        }
+
         public bool ConfirmClearData()
         {
             var dialog = new ClearDataWindow { Owner = ActiveWindow() };
+            return dialog.ShowDialog() == true;
+        }
+
+        public bool EditSettings()
+        {
+            var dialog = new SettingsWindow { Owner = ActiveWindow() };
             return dialog.ShowDialog() == true;
         }
 

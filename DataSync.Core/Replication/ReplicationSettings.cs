@@ -33,13 +33,13 @@ namespace DataSync.Core.Replication
         {
             return new ReplicationSettings
             {
-                RealTimeUpdateInterval = TimeSpan.FromSeconds(Math.Max(0, AppSettings.GetInt("RealTimeUpdateInterval", 1))),
-                RealTimeRowLimit       = Math.Max(1, AppSettings.GetInt("RealTimeRowLimit", 1000)),
-                SyncUpdateInterval     = TimeSpan.FromSeconds(Math.Max(0, AppSettings.GetInt("SyncUpdateInterval", 0))),
-                SyncRowLimit           = Math.Max(1, AppSettings.GetInt("SyncRowLimit", 1000)),
-                MaxRowsPerSecond       = Math.Max(0, AppSettings.GetInt("MaxRowsPerSecond", 5000)),
-                GapCheckInterval       = TimeSpan.FromMinutes(Math.Max(1, AppSettings.GetInt("GapCheckInterval", 10))),
-                FailureLimit           = Math.Max(0, AppSettings.GetInt("TimeoutCounterLimit", 10))
+                RealTimeUpdateInterval = TimeSpan.FromSeconds(Math.Max(0, AppSettings.GetInt(SettingKeys.RealTimeUpdateInterval, 1))),
+                RealTimeRowLimit       = Math.Max(1, AppSettings.GetInt(SettingKeys.RealTimeRowLimit, 1000)),
+                SyncUpdateInterval     = TimeSpan.FromSeconds(Math.Max(0, AppSettings.GetInt(SettingKeys.SyncUpdateInterval, 0))),
+                SyncRowLimit           = Math.Max(1, AppSettings.GetInt(SettingKeys.SyncRowLimit, 1000)),
+                MaxRowsPerSecond       = Math.Max(0, AppSettings.GetInt(SettingKeys.MaxRowsPerSecond, 5000)),
+                GapCheckInterval       = TimeSpan.FromMinutes(Math.Max(1, AppSettings.GetInt(SettingKeys.GapCheckInterval, 10))),
+                FailureLimit           = Math.Max(0, AppSettings.GetInt(SettingKeys.TimeoutCounterLimit, 10))
             };
         }
     }

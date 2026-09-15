@@ -18,11 +18,11 @@ namespace DataSync.Infrastructure
         {
             return new AppInfo
             {
-                ProgramName    = AppSettings.GetString("ProgramName", "DataSync"),
-                ProgramDetails = AppSettings.GetString("ProgramDetails", "Drilling Data Replication"),
+                ProgramName    = AppSettings.GetString(SettingKeys.ProgramName, "DataSync"),
+                ProgramDetails = AppSettings.GetString(SettingKeys.ProgramDetails, "Drilling Data Replication"),
                 Version        = Assembly.GetEntryAssembly().GetName().Version.ToString(3),
-                Copyright      = AppSettings.GetString("CompanyCopyright", "©2026 EPSCo. All rights reserved"),
-                RigName        = AppSettings.GetString("RigName", "Unknown")
+                Copyright      = AppSettings.GetString(SettingKeys.CompanyCopyright, "©2026 EPSCo. All rights reserved"),
+                RigName        = AppSettings.GetString(SettingKeys.RigName, "Unknown")
             };
         }
     }

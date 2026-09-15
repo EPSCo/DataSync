@@ -39,6 +39,7 @@ namespace DataSync.ViewModels
         private string _lastBaseId;
         private string _lastRecordTime;
         private string _syncState;
+        private string _syncNextBaseId = "-";
         private string _syncButtonText = "Pause Sync Task";
 
         public MainViewModel(AppInfo info, string userName, IShell shell, bool designMode)
@@ -59,6 +60,7 @@ namespace DataSync.ViewModels
             ClearLocalDataCommand = new RelayCommand(ClearLocalData, () => !_designMode && !IsBusy);
             RestartCommand = new RelayCommand(Restart, () => !IsBusy);
             ClearMessagesCommand = new RelayCommand(() => Messages.Clear());
+            SettingsCommand = new RelayCommand(EditSettings, () => !IsBusy);
 
             _timer = new DispatcherTimer { Interval = TimeSpan.FromSeconds(1) };
             _timer.Tick += (s, e) => Refresh();
@@ -79,6 +81,7 @@ namespace DataSync.ViewModels
         public ICommand ClearLocalDataCommand { get; }
         public ICommand RestartCommand { get; }
         public ICommand ClearMessagesCommand { get; }
+        public ICommand SettingsCommand { get; }
 
         public string CurrentTime
         {
@@ -108,6 +111,13 @@ namespace DataSync.ViewModels
         {
             get { return _syncState; }
             private set { SetProperty(ref _syncState, value); }
+        }
+
+        /// <summary>Highest BaseID of the next sync window, or "-" when there is nothing to sync.</summary>
+        public string SyncNextBaseId
+        {
+            get { return _syncNextBaseId; }
+            private set { SetProperty(ref _syncNextBaseId, value); }
         }
 
         public string SyncButtonText
@@ -213,6 +223,7 @@ namespace DataSync.ViewModels
             LastBaseId = status.LastLocalBaseId.ToString();
             LastRecordTime = status.LastLocalRecordTime?.ToString(TimeFormat) ?? "";
             SyncState = status.SyncState.ToString();
+            SyncNextBaseId = status.SyncNextBaseId > 0 ? status.SyncNextBaseId.ToString() : "-";
 
             // Downloading or NoOldData (waiting to check for new gaps) both mean the sync task is running.
             SyncButtonText = status.SyncState == TaskState.Stop ? "Resume Sync Task" : "Pause Sync Task";
@@ -332,6 +343,21 @@ namespace DataSync.ViewModels
             }
 
             Restart();
+        }
+
+        private void EditSettings()
+        {
+            if (!_shell.EditSettings())
+            {
+                return;
+            }
+
+            AddMessage("Settings saved.");
+            // Settings are read at startup (replication, logging, rig name), so they apply after a restart.
+            if (_shell.Confirm("Settings saved. They take effect after the application restarts.\n\nRestart now?", "Settings"))
+            {
+                Restart();
+            }
         }
 
         private void Restart()

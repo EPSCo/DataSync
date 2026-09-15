@@ -23,7 +23,7 @@
 
     <!-- ========== Text ========== -->
     <Style x:Key="SectionTitle" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="15" />
+        <Setter Property="FontSize" Value="13" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
     </Style>
@@ -31,15 +31,15 @@
     <Style x:Key="FieldLabel" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
         <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="Margin" Value="0,4,16,4" />
+        <Setter Property="Margin" Value="0,2,10,2" />
     </Style>
 
     <Style x:Key="FieldValue" TargetType="TextBlock">
         <Setter Property="Foreground" Value="{StaticResource TextBrush}" />
-        <Setter Property="FontSize" Value="17" />
+        <Setter Property="FontSize" Value="14" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="VerticalAlignment" Value="Center" />
-        <Setter Property="Margin" Value="0,4" />
+        <Setter Property="Margin" Value="0,1" />
     </Style>
 
     <!-- A TaskState value, coloured by state. -->
@@ -58,7 +58,7 @@
     </Style>
 
     <Style x:Key="CellText" TargetType="TextBlock">
-        <Setter Property="Margin" Value="12,0" />
+        <Setter Property="Margin" Value="8,0" />
         <Setter Property="VerticalAlignment" Value="Center" />
     </Style>
 
@@ -68,7 +68,7 @@
         <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="CornerRadius" Value="6" />
-        <Setter Property="Padding" Value="18,14" />
+        <Setter Property="Padding" Value="12,8" />
     </Style>
 
     <!-- ========== Buttons ========== -->
@@ -77,8 +77,8 @@
         <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
         <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="Padding" Value="14,7" />
-        <Setter Property="MinHeight" Value="36" />
+        <Setter Property="Padding" Value="10,4" />
+        <Setter Property="MinHeight" Value="28" />
         <Setter Property="Cursor" Value="Hand" />
         <Setter Property="Template">
             <Setter.Value>
@@ -137,6 +137,23 @@
         </Style.Triggers>
     </Style>
 
+    <!-- A button on the dark header bar. -->
+    <Style x:Key="HeaderButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Foreground" Value="White" />
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderBrush" Value="#52606D" />
+        <Setter Property="MinHeight" Value="24" />
+        <Setter Property="Padding" Value="10,2" />
+        <Style.Triggers>
+            <Trigger Property="IsMouseOver" Value="True">
+                <Setter Property="Background" Value="#334155" />
+            </Trigger>
+            <Trigger Property="IsPressed" Value="True">
+                <Setter Property="Background" Value="#3E4C59" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- ========== Inputs ========== -->
     <Style TargetType="TextBox">
         <Setter Property="Padding" Value="6,6" />
@@ -165,7 +182,7 @@
         <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
         <Setter Property="RowBackground" Value="{StaticResource SurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
-        <Setter Property="RowHeight" Value="32" />
+        <Setter Property="RowHeight" Value="24" />
         <Setter Property="SelectionUnit" Value="FullRow" />
     </Style>
 
@@ -173,7 +190,7 @@
         <Setter Property="Background" Value="{StaticResource SurfaceAltBrush}" />
         <Setter Property="Foreground" Value="{StaticResource MutedTextBrush}" />
         <Setter Property="FontWeight" Value="SemiBold" />
-        <Setter Property="Padding" Value="12,8" />
+        <Setter Property="Padding" Value="8,5" />
         <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
         <Setter Property="BorderThickness" Value="0,0,0,1" />
     </Style>
