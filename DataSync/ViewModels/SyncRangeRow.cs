@@ -8,8 +8,9 @@ namespace DataSync.ViewModels
     public sealed class SyncRangeRow : ObservableObject
     {
         private long _baseIdBegin;
-        private long _baseIdEnd;
-        private string _startSyncPoint;
+        private string _baseIdEnd;
+        private string _currentRecord;
+        private string _percent;
         private string _status;
 
         public long BaseIdBegin
@@ -18,16 +19,22 @@ namespace DataSync.ViewModels
             set { SetProperty(ref _baseIdBegin, value); }
         }
 
-        public long BaseIdEnd
+        public string BaseIdEnd
         {
             get { return _baseIdEnd; }
             set { SetProperty(ref _baseIdEnd, value); }
         }
 
-        public string StartSyncPoint
+        public string CurrentRecord
         {
-            get { return _startSyncPoint; }
-            set { SetProperty(ref _startSyncPoint, value); }
+            get { return _currentRecord; }
+            set { SetProperty(ref _currentRecord, value); }
+        }
+
+        public string Percent
+        {
+            get { return _percent; }
+            set { SetProperty(ref _percent, value); }
         }
 
         public string Status

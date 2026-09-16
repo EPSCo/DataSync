@@ -54,6 +54,7 @@ namespace DataSync.ViewModels
         private long _syncRowsCopied;
         private double _realTimeRate;
         private double _syncRate;
+        private int _dotFrame;
 
         public MainViewModel(AppInfo info, string userName, IShell shell, bool designMode)
         {
@@ -344,6 +345,7 @@ namespace DataSync.ViewModels
         {
             var realTimeEnd = Math.Max(status.RealTimeNextBaseId, status.LastLocalBaseId);
             var ranges = status.Ranges.OrderByDescending(r => r.Range.BaseIdBegin).ToList();
+            _dotFrame = (_dotFrame + 1) % 3;
 
             while (Ranges.Count > ranges.Count)
             {
@@ -360,12 +362,41 @@ namespace DataSync.ViewModels
                     Ranges.Add(new SyncRangeRow());
                 }
 
+                // Queued and syncing ranges are copied backwards from StartSyncPoint; their BaseIdEnd is the progress.
+                var hasStart = !isRealTime && range.StartSyncPoint > 0;
+                var inProgress = range.Status == RangeStatus.Syncing ||
+                                 (hasStart && range.Status == RangeStatus.NotSync && range.Range.BaseIdEnd != range.StartSyncPoint);
+
                 var row = Ranges[i];
                 row.BaseIdBegin = range.Range.BaseIdBegin;
-                row.BaseIdEnd = isRealTime ? realTimeEnd : range.Range.BaseIdEnd;
-                row.StartSyncPoint = !isRealTime && range.StartSyncPoint > 0 ? FormatRecord(range.StartSyncPoint) : "-";
+                row.BaseIdEnd = isRealTime ? "—" : FormatRecord(hasStart ? range.StartSyncPoint : range.Range.BaseIdEnd);
+                row.CurrentRecord = isRealTime ? FormatRecord(realTimeEnd) : inProgress ? FormatRecord(range.Range.BaseIdEnd) : "—";
+                row.Percent = isRealTime ? new string('.', _dotFrame + 1) : DescribePercent(range, hasStart);
                 row.Status = DescribeStatus(range.Status);
             }
+        }
+
+        /// <summary>
+        /// Share of a range copied so far. Sync reads backwards from the end record (StartSyncPoint), so the records
+        /// between it and the current record (BaseIdEnd) are done.
+        /// </summary>
+        private static string DescribePercent(SyncRange range, bool hasStart)
+        {
+            if (range.Status == RangeStatus.Synced)
+            {
+                return "Completed";
+            }
+            // Only the range being copied shows progress; queued ranges show "—".
+            if (range.Status != RangeStatus.Syncing || !hasStart)
+            {
+                return "—";
+            }
+
+            var total = range.StartSyncPoint - range.Range.BaseIdBegin + 1;
+            var copied = range.StartSyncPoint - range.Range.BaseIdEnd;
+            var percent = total > 0 ? Math.Max(0, Math.Min(100, copied * 100.0 / total)) : 0;
+            // Rounded down so a range still being copied never shows 100.00.
+            return (Math.Floor(percent * 100) / 100).ToString("0.00", CultureInfo.InvariantCulture);
         }
 
         /// <summary>Record numbers are grouped in thousands (32,467,044); the Sync table columns do the same.</summary>
