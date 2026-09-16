@@ -54,6 +54,8 @@ assemblies. No Telerik, Serilog, Dapper, MVVM toolkits, etc. Only `DataSync.Test
     (load, validate and save for the Settings dialog) and `ConfigFile` (edits `<appSettings>` in the .config XML
     in place, keeping comments). Settings are read at startup, so saved changes apply after a restart. A new
     user-editable key needs a property and validation in `EditableSettings` and a field in `SettingsWindow.xaml`.
+    Exception: `FontSettings` (Settings → Font settings) applies at once through `DynamicResource FontSize*` resources
+    in `Styles.xaml`; a new text style gets a key in `SettingKeys`, an item in `FontSettings` and a default resource.
 - `DataSync` (WPF)
   - `App.xaml.cs`: startup sequence (logger → splash + `StartupChecks`, which retries an unreachable remote database
     until it answers or the user clicks Exit → auto-login from `PW.txt` or `LoginWindow`

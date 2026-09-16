@@ -86,6 +86,26 @@ namespace DataSync.Tests
         }
 
         [TestMethod]
+        public void FontSettings_ValidatesRangeAndNormalizes()
+        {
+            var settings = FontSettings.Defaults();
+            Assert.IsNull(settings.Validate());
+
+            settings.Items[0].Size = " 20 ";
+            Assert.AreEqual("20", settings.ToValues()[SettingKeys.FontSizeBody]);
+            Assert.AreEqual("16", settings.ToValues()[SettingKeys.FontSizeDialogTitle]);
+
+            settings.Items[1].Size = "7";
+            StringAssert.StartsWith(settings.Validate(), "Section titles size");
+
+            settings.Items[1].Size = "abc";
+            Assert.IsNotNull(settings.Validate());
+
+            settings.Items[1].Size = "37";
+            Assert.IsNotNull(settings.Validate());
+        }
+
+        [TestMethod]
         public void SaveAppSettings_UpdatesAndAddsKeysAndKeepsComments()
         {
             var path = Path.GetTempFileName();

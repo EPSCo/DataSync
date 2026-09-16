@@ -5,7 +5,7 @@
         Width="768" Height="576" MinWidth="768" MinHeight="576"
         WindowStartupLocation="CenterScreen"
         Icon="/Resources/app.ico"
-        FontFamily="Segoe UI" FontSize="12"
+        FontFamily="Segoe UI" FontSize="{DynamicResource FontSizeBody}"
         Foreground="{StaticResource TextBrush}"
         Background="{StaticResource WindowBackgroundBrush}">
     <Grid>
@@ -20,12 +20,12 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Current time" Foreground="{StaticResource HeaderMutedTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <TextBlock Text="{Binding CurrentTime}" Foreground="White" FontFamily="Consolas" FontSize="14" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding CurrentTime}" Foreground="White" FontFamily="Consolas" FontSize="{DynamicResource FontSizeClock}" VerticalAlignment="Center" />
                     <Button Content="Settings" Command="{Binding SettingsCommand}" Style="{StaticResource HeaderButton}" Margin="14,0,0,0" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Rig name" Foreground="{StaticResource HeaderMutedTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <TextBlock Text="{Binding RigName}" Foreground="White" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding RigName}" Foreground="White" FontSize="{DynamicResource FontSizeRigName}" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
             </DockPanel>
         </Border>

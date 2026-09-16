@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
+using DataSync.Core.Configuration;
 using DataSync.Core.Data;
 using DataSync.Core.Logging;
 using DataSync.Core.Models;
@@ -65,6 +66,7 @@ namespace DataSync
 
             Info = AppInfo.Load();
             LogEnvironment(e.Args, logSettings);
+            FontSizes.Apply(FontSettings.Load());
 #if DEBUG
             IsDesignMode = e.Args.Any(a => string.Equals(a, DesignModeArgument, StringComparison.OrdinalIgnoreCase));
 #endif

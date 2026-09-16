@@ -32,5 +32,15 @@ namespace DataSync.Core.Configuration
         public const string CommandTimeout = "CommandTimeout";
         public const string PrioritizeLatestData = "PrioritizeLatestData";
         public const string LogLevel = "LogLevel";
+
+        // Font sizes (DataSync only); also the WPF resource keys in Themes\Styles.xaml.
+        public const string FontSizeBody = "FontSizeBody";
+        public const string FontSizeSectionTitle = "FontSizeSectionTitle";
+        public const string FontSizeFieldLabel = "FontSizeFieldLabel";
+        public const string FontSizeFieldValue = "FontSizeFieldValue";
+        public const string FontSizeTabHeader = "FontSizeTabHeader";
+        public const string FontSizeRigName = "FontSizeRigName";
+        public const string FontSizeClock = "FontSizeClock";
+        public const string FontSizeDialogTitle = "FontSizeDialogTitle";
     }
 }

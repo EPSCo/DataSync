@@ -43,6 +43,11 @@ namespace DataSync.Views
             }
         }
 
+        private void FontSettingsButton_Click(object sender, RoutedEventArgs e)
+        {
+            new FontSettingsWindow { Owner = this }.ShowDialog();
+        }
+
         private void ShowError(string message)
         {
             ErrorText.Text = message;

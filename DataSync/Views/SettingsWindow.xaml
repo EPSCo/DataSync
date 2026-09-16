@@ -7,7 +7,7 @@
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
         ShowInTaskbar="False"
-        FontFamily="Segoe UI" FontSize="12"
+        FontFamily="Segoe UI" FontSize="{DynamicResource FontSizeBody}"
         Foreground="{StaticResource TextBrush}"
         Background="{StaticResource WindowBackgroundBrush}">
     <Window.Resources>
@@ -28,7 +28,7 @@
         </Style>
     </Window.Resources>
     <StackPanel Margin="14,12">
-        <TextBlock Text="Settings" Style="{StaticResource SectionTitle}" FontSize="16" />
+        <TextBlock Text="Settings" Style="{StaticResource DialogTitle}" />
         <TextBlock Foreground="{StaticResource MutedTextBrush}" TextWrapping="Wrap" Margin="0,2,0,10"
                    Text="Saved to the application configuration file. Changes take effect after the application restarts." />
 
@@ -204,9 +204,13 @@
 
         <TextBlock x:Name="ErrorText" Foreground="{StaticResource DangerBrush}" TextWrapping="Wrap" Margin="0,10,0,0" Visibility="Collapsed" />
 
-        <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,12,0,0">
+        <DockPanel Margin="0,12,0,0">
+            <Button Content="Font settings..." MinWidth="110" Click="FontSettingsButton_Click"
+                    ToolTip="Font sizes of the text styles; applied and saved at once" />
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="Cancel" IsCancel="True" MinWidth="90" Margin="0,0,8,0" />
             <Button Content="Save" IsDefault="True" MinWidth="90" Style="{StaticResource PrimaryButton}" Click="SaveButton_Click" />
-        </StackPanel>
+            </StackPanel>
+        </DockPanel>
     </StackPanel>
 </Window>
