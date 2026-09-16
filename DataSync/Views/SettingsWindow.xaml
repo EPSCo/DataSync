@@ -69,42 +69,27 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
 
-                            <TextBlock Grid.Row="7" Text="Latest data first" Style="{StaticResource FieldLabel}"
+                            <TextBlock Grid.Row="4" Text="Latest data first" Style="{StaticResource FieldLabel}"
                                        ToolTip="When real-time falls behind, copy the newest rows first and back-fill the skipped rows newest first; history waits while real-time is behind or failing. Off: catch up oldest-first" />
-                            <CheckBox Grid.Row="7" Grid.Column="1" IsChecked="{Binding PrioritizeLatestData}" />
+                            <CheckBox Grid.Row="4" Grid.Column="1" IsChecked="{Binding PrioritizeLatestData}" />
 
                             <TextBlock Grid.Row="0" Text="Real-time interval (s)" Style="{StaticResource FieldLabel}"
                                        ToolTip="Seconds between real-time reads once caught up" />
                             <TextBox Grid.Row="0" Grid.Column="1"                                     Text="{Binding RealTimeUpdateInterval, UpdateSourceTrigger=PropertyChanged}" />
 
-                            <TextBlock Grid.Row="1" Text="Real-time row limit" Style="{StaticResource FieldLabel}"
-                                       ToolTip="Maximum rows per real-time read (every read when adaptive batch size is off)" />
-                            <TextBox Grid.Row="1" Grid.Column="1"                                     Text="{Binding RealTimeRowLimit, UpdateSourceTrigger=PropertyChanged}" />
-
-                            <TextBlock Grid.Row="2" Text="Sync pause (s)" Style="{StaticResource FieldLabel}"
+                            <TextBlock Grid.Row="1" Text="Sync pause (s)" Style="{StaticResource FieldLabel}"
                                        ToolTip="Seconds to pause between sync (back-fill) batches; 0 = no pause" />
-                            <TextBox Grid.Row="2" Grid.Column="1"                                     Text="{Binding SyncUpdateInterval, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBox Grid.Row="1" Grid.Column="1"                                     Text="{Binding SyncUpdateInterval, UpdateSourceTrigger=PropertyChanged}" />
 
-                            <TextBlock Grid.Row="3" Text="Sync row limit" Style="{StaticResource FieldLabel}"
-                                       ToolTip="Maximum rows per sync batch (every batch when adaptive batch size is off)" />
-                            <TextBox Grid.Row="3" Grid.Column="1"                                     Text="{Binding SyncRowLimit, UpdateSourceTrigger=PropertyChanged}" />
-
-                            <TextBlock Grid.Row="4" Text="Gap check interval (min)" Style="{StaticResource FieldLabel}"
+                            <TextBlock Grid.Row="2" Text="Gap check interval (min)" Style="{StaticResource FieldLabel}"
                                        ToolTip="Minutes between checks for new gaps once nothing is left to sync" />
-                            <TextBox Grid.Row="4" Grid.Column="1"                                     Text="{Binding GapCheckInterval, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBox Grid.Row="2" Grid.Column="1"                                     Text="{Binding GapCheckInterval, UpdateSourceTrigger=PropertyChanged}" />
 
-                            <TextBlock Grid.Row="5" Text="Max rows per second" Style="{StaticResource FieldLabel}"
-                                       ToolTip="Upper limit on rows copied per second by each task; 0 = no limit" />
-                            <TextBox Grid.Row="5" Grid.Column="1"                                     Text="{Binding MaxRowsPerSecond, UpdateSourceTrigger=PropertyChanged}" />
-
-                            <TextBlock Grid.Row="6" Text="Failures before restart" Style="{StaticResource FieldLabel}"
+                            <TextBlock Grid.Row="3" Text="Failures before restart" Style="{StaticResource FieldLabel}"
                                        ToolTip="Consecutive failed reads/writes of one task before the application restarts" />
-                            <TextBox Grid.Row="6" Grid.Column="1"                                     Text="{Binding TimeoutCounterLimit, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBox Grid.Row="3" Grid.Column="1"                                     Text="{Binding TimeoutCounterLimit, UpdateSourceTrigger=PropertyChanged}" />
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -129,7 +114,7 @@
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0" Text="Adaptive batch size" Style="{StaticResource FieldLabel}"
-                                   ToolTip="Real-time: size reads from the rate new records arrive. Sync: size reads for the most records per second. Off: always read the row limits" />
+                                   ToolTip="Real-time: size reads from the rate new records arrive. Sync: size reads for the most records per second. Off: always read the row limits set in App.config" />
                         <CheckBox Grid.Row="0" Grid.Column="1" x:Name="AdaptiveCheckBox" IsChecked="{Binding AdaptiveBatchSize}" />
 
                         <TextBlock Grid.Row="1" Text="Minimum row limit" Style="{StaticResource FieldLabel}"

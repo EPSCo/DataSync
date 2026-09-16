@@ -23,11 +23,9 @@ namespace DataSync.Core.Configuration
 
         /// <summary>Seconds.</summary>
         public string RealTimeUpdateInterval { get; set; }
-        public string RealTimeRowLimit { get; set; }
 
         /// <summary>Seconds.</summary>
         public string SyncUpdateInterval { get; set; }
-        public string SyncRowLimit { get; set; }
 
         public bool PrioritizeLatestData { get; set; }
         public bool AdaptiveBatchSize { get; set; }
@@ -40,7 +38,6 @@ namespace DataSync.Core.Configuration
 
         /// <summary>Minutes.</summary>
         public string GapCheckInterval { get; set; }
-        public string MaxRowsPerSecond { get; set; }
         public string TimeoutCounterLimit { get; set; }
 
         public string LogPathDir { get; set; }
@@ -62,9 +59,7 @@ namespace DataSync.Core.Configuration
             {
                 RigName                = AppSettings.GetString(SettingKeys.RigName, "Unknown"),
                 RealTimeUpdateInterval = ((long)replication.RealTimeUpdateInterval.TotalSeconds).ToString(Invariant),
-                RealTimeRowLimit       = replication.RealTimeRowLimit.ToString(Invariant),
                 SyncUpdateInterval     = ((long)replication.SyncUpdateInterval.TotalSeconds).ToString(Invariant),
-                SyncRowLimit           = replication.SyncRowLimit.ToString(Invariant),
                 PrioritizeLatestData   = replication.PrioritizeLatestData,
                 AdaptiveBatchSize      = replication.AdaptiveBatchSize,
                 MinRowLimit            = replication.MinRowLimit.ToString(Invariant),
@@ -72,7 +67,6 @@ namespace DataSync.Core.Configuration
                 SyncBatchMeasurements  = replication.SyncBatchMeasurements.ToString(Invariant),
                 CommandTimeout         = ((long)replication.CommandTimeout.TotalSeconds).ToString(Invariant),
                 GapCheckInterval       = ((long)replication.GapCheckInterval.TotalMinutes).ToString(Invariant),
-                MaxRowsPerSecond       = replication.MaxRowsPerSecond.ToString(Invariant),
                 TimeoutCounterLimit    = replication.FailureLimit.ToString(Invariant),
                 LogPathDir             = AppSettings.GetString(SettingKeys.LogPathDir, "logs"),
                 RollingInterval        = log.RollingInterval.ToString(),
@@ -94,15 +88,12 @@ namespace DataSync.Core.Configuration
             }
 
             return CheckInt(RealTimeUpdateInterval, 0, "Real-time update interval")
-                   ?? CheckInt(RealTimeRowLimit, 1, "Real-time row limit")
                    ?? CheckInt(SyncUpdateInterval, 0, "Sync pause between batches")
-                   ?? CheckInt(SyncRowLimit, 1, "Sync row limit")
                    ?? CheckInt(MinRowLimit, 1, "Minimum row limit")
                    ?? CheckInt(RealTimeBatchMultiplier, 1, "Real-time batch multiplier")
                    ?? CheckInt(SyncBatchMeasurements, 1, "Sync batch measurements")
                    ?? CheckInt(CommandTimeout, 5, "Command timeout")
                    ?? CheckInt(GapCheckInterval, 1, "Gap check interval")
-                   ?? CheckInt(MaxRowsPerSecond, 0, "Max rows per second")
                    ?? CheckInt(TimeoutCounterLimit, 0, "Failures before restart")
                    ?? CheckLogDirectory()
                    ?? (RollingIntervalNames.Contains(RollingInterval) ? null : "Select a log rolling interval.")
@@ -120,9 +111,7 @@ namespace DataSync.Core.Configuration
             {
                 [SettingKeys.RigName]                = RigName.Trim(),
                 [SettingKeys.RealTimeUpdateInterval] = NormalizeInt(RealTimeUpdateInterval),
-                [SettingKeys.RealTimeRowLimit]       = NormalizeInt(RealTimeRowLimit),
                 [SettingKeys.SyncUpdateInterval]     = NormalizeInt(SyncUpdateInterval),
-                [SettingKeys.SyncRowLimit]           = NormalizeInt(SyncRowLimit),
                 [SettingKeys.PrioritizeLatestData]   = PrioritizeLatestData ? "true" : "false",
                 [SettingKeys.AdaptiveBatchSize]      = AdaptiveBatchSize ? "true" : "false",
                 [SettingKeys.MinRowLimit]            = NormalizeInt(MinRowLimit),
@@ -130,7 +119,6 @@ namespace DataSync.Core.Configuration
                 [SettingKeys.SyncBatchMeasurements]  = NormalizeInt(SyncBatchMeasurements),
                 [SettingKeys.CommandTimeout]         = NormalizeInt(CommandTimeout),
                 [SettingKeys.GapCheckInterval]       = NormalizeInt(GapCheckInterval),
-                [SettingKeys.MaxRowsPerSecond]       = NormalizeInt(MaxRowsPerSecond),
                 [SettingKeys.TimeoutCounterLimit]    = NormalizeInt(TimeoutCounterLimit),
                 [SettingKeys.LogPathDir]             = LogPathDir.Trim(),
                 [SettingKeys.RollingInterval]        = RollingInterval,

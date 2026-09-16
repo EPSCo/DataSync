@@ -14,16 +14,13 @@ namespace DataSync.Tests
             {
                 RigName = " MD-2 ",
                 RealTimeUpdateInterval = "1",
-                RealTimeRowLimit = "1000",
-                SyncUpdateInterval = "0",
-                SyncRowLimit = " 500 ",
+                SyncUpdateInterval = " 2 ",
                 AdaptiveBatchSize = true,
                 MinRowLimit = "5",
                 RealTimeBatchMultiplier = "5",
                 SyncBatchMeasurements = "3",
                 CommandTimeout = "60",
                 GapCheckInterval = "10",
-                MaxRowsPerSecond = "0",
                 TimeoutCounterLimit = "10",
                 LogPathDir = "logs",
                 RollingInterval = "Day",
@@ -44,8 +41,8 @@ namespace DataSync.Tests
         public void Validate_RejectsValuesTheAppWouldClamp()
         {
             var settings = ValidSettings();
-            settings.SyncRowLimit = "0";
-            StringAssert.StartsWith(settings.Validate(), "Sync row limit");
+            settings.MinRowLimit = "0";
+            StringAssert.StartsWith(settings.Validate(), "Minimum row limit");
 
             settings = ValidSettings();
             settings.GapCheckInterval = "abc";
@@ -78,7 +75,10 @@ namespace DataSync.Tests
             var values = ValidSettings().ToValues();
 
             Assert.AreEqual("MD-2", values[SettingKeys.RigName]);
-            Assert.AreEqual("500", values[SettingKeys.SyncRowLimit]);
+            Assert.AreEqual("2", values[SettingKeys.SyncUpdateInterval]);
+            Assert.IsFalse(values.ContainsKey(SettingKeys.SyncRowLimit));
+            Assert.IsFalse(values.ContainsKey(SettingKeys.RealTimeRowLimit));
+            Assert.IsFalse(values.ContainsKey(SettingKeys.MaxRowsPerSecond));
             Assert.AreEqual("true", values[SettingKeys.RollOnFileSizeLimit]);
             Assert.AreEqual("true", values[SettingKeys.AdaptiveBatchSize]);
             Assert.AreEqual("60", values[SettingKeys.CommandTimeout]);
