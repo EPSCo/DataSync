@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Input;
@@ -22,7 +23,7 @@ namespace DataSync.ViewModels
     public sealed class MainViewModel : ObservableObject
     {
         private const int MaxMessages = 100;
-        private const string TimeFormat = "yyyy/MM/dd HH:mm:ss";
+        private const string TimeFormat = "yyyy-MM-dd HH:mm:ss";
         private static readonly TimeSpan DatabaseCheckInterval = TimeSpan.FromSeconds(30);
 
         private readonly IShell _shell;
@@ -253,12 +254,12 @@ namespace DataSync.ViewModels
             RealTimeState = status.RealTimeBehind && status.RealTimeState != TaskState.Stop
                 ? "Catching up"
                 : status.RealTimeState.ToString();
-            LastBaseId = status.LastLocalBaseId.ToString();
+            LastBaseId = FormatRecord(status.LastLocalBaseId);
             LastRecordTime = status.LastLocalRecordTime?.ToString(TimeFormat) ?? "";
             SyncState = status.SyncYielding && status.SyncState != TaskState.Stop
                 ? "Waiting for real-time"
                 : status.SyncState.ToString();
-            SyncNextBaseId = status.SyncNextBaseId > 0 ? status.SyncNextBaseId.ToString() : "-";
+            SyncNextBaseId = status.SyncNextBaseId > 0 ? FormatRecord(status.SyncNextBaseId) : "-";
             UpdateBatchInfo(status);
 
             // Downloading or NoOldData (waiting to check for new gaps) both mean the sync task is running.
@@ -336,7 +337,7 @@ namespace DataSync.ViewModels
 
         private static string FormatBatch(int batchSize, bool adaptive, double rowsPerSecond)
         {
-            return batchSize + " rows" + (adaptive ? "" : " (fixed)") + ", " + rowsPerSecond.ToString("0") + " rows/s";
+            return batchSize + " R" + (adaptive ? "" : " (fixed)") + ", " + rowsPerSecond.ToString("0") + " R/s";
         }
 
         private void UpdateRanges(ReplicationStatus status)
@@ -362,9 +363,15 @@ namespace DataSync.ViewModels
                 var row = Ranges[i];
                 row.BaseIdBegin = range.Range.BaseIdBegin;
                 row.BaseIdEnd = isRealTime ? realTimeEnd : range.Range.BaseIdEnd;
-                row.StartSyncPoint = !isRealTime && range.StartSyncPoint > 0 ? range.StartSyncPoint.ToString() : "-";
+                row.StartSyncPoint = !isRealTime && range.StartSyncPoint > 0 ? FormatRecord(range.StartSyncPoint) : "-";
                 row.Status = DescribeStatus(range.Status);
             }
+        }
+
+        /// <summary>Record numbers are grouped in thousands (32,467,044); the Sync table columns do the same.</summary>
+        private static string FormatRecord(long baseId)
+        {
+            return baseId.ToString("N0", CultureInfo.InvariantCulture);
         }
 
         /// <summary>Status text for the Sync Table; the row colours in MainWindow.xaml match on these words.</summary>

@@ -40,7 +40,7 @@
 
             <Grid>
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="1.3*" />
                     <RowDefinition Height="8" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
@@ -50,8 +50,9 @@
                         <TextBlock Text="Real-time data" Style="{StaticResource SectionTitle}" />
                         <Grid Margin="0,4,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="110" />
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="1.5*"/>
+                                <ColumnDefinition Width="1.5*"/>
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -59,13 +60,12 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                             </Grid.RowDefinitions>
-                            <TextBlock Text="Status" Style="{StaticResource FieldLabel}" />
+                            <TextBlock Text="Status" Style="{StaticResource FieldLabel}" Margin="0,0,10,0" />
                             <TextBlock Grid.Column="1" Text="{Binding RealTimeState}" Style="{StaticResource StateValue}" />
-                            <TextBlock Grid.Row="3" Text="Batch" Style="{StaticResource FieldLabel}" ToolTip="Rows per remote read and recent copy rate" />
-                            <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding RealTimeBatch}" Style="{StaticResource FieldValue}" />
-                            <TextBlock Grid.Row="1" Text="Current record" Style="{StaticResource FieldLabel}" />
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding RealTimeBatch}" Style="{StaticResource FieldValue}" />
+                            <TextBlock Grid.Row="1" Text="Current record" Style="{StaticResource FieldLabel}" Margin="0,0,10,0" />
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LastBaseId}" Style="{StaticResource FieldValue}" />
-                            <TextBlock Grid.Row="2" Text="Current record time" Style="{StaticResource FieldLabel}" />
+                            <TextBlock Grid.Row="2" Text="Record time" Style="{StaticResource FieldLabel}" Margin="0,0,10,0" />
                             <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LastRecordTime}" Style="{StaticResource FieldValue}" />
                         </Grid>
                     </StackPanel>
@@ -76,8 +76,9 @@
                         <TextBlock Text="Historical data" Style="{StaticResource SectionTitle}" />
                         <Grid Margin="0,4,0,0">
                             <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="110" />
                                 <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="1.5*" />
+                                <ColumnDefinition Width="1.5*" />
                             </Grid.ColumnDefinitions>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
@@ -88,8 +89,7 @@
                             <TextBlock Grid.Column="1" Text="{Binding SyncState}" Style="{StaticResource StateValue}" />
                             <TextBlock Grid.Row="1" Text="Current record" Style="{StaticResource FieldLabel}" />
                             <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SyncNextBaseId}" Style="{StaticResource FieldValue}" />
-                            <TextBlock Grid.Row="2" Text="Batch" Style="{StaticResource FieldLabel}" ToolTip="BaseIDs per remote read and recent copy rate" />
-                            <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SyncBatch}" Style="{StaticResource FieldValue}" />
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding SyncBatch}" Style="{StaticResource FieldValue}" />
                         </Grid>
                     </StackPanel>
                 </Border>
@@ -127,8 +127,8 @@
                         </Style>
                     </DataGrid.RowStyle>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Begin record" Binding="{Binding BaseIdBegin}" Width="*" ElementStyle="{StaticResource CellText}" />
-                        <DataGridTextColumn Header="End record" Binding="{Binding BaseIdEnd}" Width="*" ElementStyle="{StaticResource CellText}" />
+                        <DataGridTextColumn Header="Begin record" Binding="{Binding BaseIdBegin, StringFormat={}{0:N0}, ConverterCulture=en-US}" Width="*" ElementStyle="{StaticResource CellText}" />
+                        <DataGridTextColumn Header="End record" Binding="{Binding BaseIdEnd, StringFormat={}{0:N0}, ConverterCulture=en-US}" Width="*" ElementStyle="{StaticResource CellText}" />
                         <DataGridTextColumn Header="Sync starting record" Binding="{Binding StartSyncPoint}" Width="*" ElementStyle="{StaticResource CellText}" />
                         <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*" ElementStyle="{StaticResource CellText}" />
                     </DataGrid.Columns>
