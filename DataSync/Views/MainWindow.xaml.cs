@@ -13,7 +13,7 @@ namespace DataSync.Views
         {
             InitializeComponent();
 
-            _viewModel = new MainViewModel(App.Info, App.CurrentUser.UserName, new Shell(), App.IsDesignMode);
+            _viewModel = new MainViewModel(App.Info, new Shell(), App.IsDesignMode);
             DataContext = _viewModel;
             Loaded += (s, e) => _viewModel.Start();
         }

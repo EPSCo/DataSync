@@ -27,11 +27,9 @@
     <sys:Double x:Key="FontSizeBody">12</sys:Double>
     <sys:Double x:Key="FontSizeSectionTitle">13</sys:Double>
     <sys:Double x:Key="FontSizeFieldLabel">13</sys:Double>
-    <sys:Double x:Key="FontSizeFieldValue">14</sys:Double>
-    <sys:Double x:Key="FontSizeTabHeader">13</sys:Double>
-    <sys:Double x:Key="FontSizeRigName">16</sys:Double>
-    <sys:Double x:Key="FontSizeClock">14</sys:Double>
-    <sys:Double x:Key="FontSizeDialogTitle">16</sys:Double>
+    <sys:Double x:Key="FontSizeFieldValue">13</sys:Double>
+    <sys:Double x:Key="FontSizeTabHeader">14</sys:Double>
+    <sys:Double x:Key="FontSizeButton">12</sys:Double>
 
     <!-- ========== Text ========== -->
     <Style x:Key="SectionTitle" TargetType="TextBlock">
@@ -78,7 +76,7 @@
 
     <!-- The title at the top of a dialog. -->
     <Style x:Key="DialogTitle" TargetType="TextBlock" BasedOn="{StaticResource SectionTitle}">
-        <Setter Property="FontSize" Value="{DynamicResource FontSizeDialogTitle}" />
+        <Setter Property="FontSize" Value="16" />
     </Style>
 
     <Style x:Key="CellText" TargetType="TextBlock">
@@ -163,6 +161,7 @@
         <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />
         <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeButton}" />
         <Setter Property="Padding" Value="10,4" />
         <Setter Property="MinHeight" Value="28" />
         <Setter Property="Cursor" Value="Hand" />

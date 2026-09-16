@@ -93,7 +93,7 @@ namespace DataSync.Tests
 
             settings.Items[0].Size = " 20 ";
             Assert.AreEqual("20", settings.ToValues()[SettingKeys.FontSizeBody]);
-            Assert.AreEqual("16", settings.ToValues()[SettingKeys.FontSizeDialogTitle]);
+            Assert.AreEqual("12", settings.ToValues()[SettingKeys.FontSizeButton]);
 
             settings.Items[1].Size = "7";
             StringAssert.StartsWith(settings.Validate(), "Section titles size");

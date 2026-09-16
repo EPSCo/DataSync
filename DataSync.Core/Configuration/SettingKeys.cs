@@ -39,8 +39,6 @@ namespace DataSync.Core.Configuration
         public const string FontSizeFieldLabel = "FontSizeFieldLabel";
         public const string FontSizeFieldValue = "FontSizeFieldValue";
         public const string FontSizeTabHeader = "FontSizeTabHeader";
-        public const string FontSizeRigName = "FontSizeRigName";
-        public const string FontSizeClock = "FontSizeClock";
-        public const string FontSizeDialogTitle = "FontSizeDialogTitle";
+        public const string FontSizeButton = "FontSizeButton";
     }
 }

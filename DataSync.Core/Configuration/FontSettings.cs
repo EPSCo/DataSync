@@ -60,11 +60,9 @@ namespace DataSync.Core.Configuration
                 new FontSizeSetting(SettingKeys.FontSizeBody,         "Body text",      12),
                 new FontSizeSetting(SettingKeys.FontSizeSectionTitle, "Section titles", 13),
                 new FontSizeSetting(SettingKeys.FontSizeFieldLabel,   "Field labels",   13),
-                new FontSizeSetting(SettingKeys.FontSizeFieldValue,   "Field values",   14),
-                new FontSizeSetting(SettingKeys.FontSizeTabHeader,    "Tab headers",    13),
-                new FontSizeSetting(SettingKeys.FontSizeRigName,      "Rig name",       16),
-                new FontSizeSetting(SettingKeys.FontSizeClock,        "Clock",          14),
-                new FontSizeSetting(SettingKeys.FontSizeDialogTitle,  "Dialog titles",  16)
+                new FontSizeSetting(SettingKeys.FontSizeFieldValue,   "Field values",   13),
+                new FontSizeSetting(SettingKeys.FontSizeTabHeader,    "Tab headers",    14),
+                new FontSizeSetting(SettingKeys.FontSizeButton,       "Buttons",        12)
             };
         }
 

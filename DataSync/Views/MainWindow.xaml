@@ -20,12 +20,12 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Current time" Foreground="{StaticResource HeaderMutedTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <TextBlock Text="{Binding CurrentTime}" Foreground="White" FontFamily="Consolas" FontSize="{DynamicResource FontSizeClock}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding CurrentTime}" Foreground="White" FontFamily="Consolas" FontSize="13" VerticalAlignment="Center" />
                     <Button Content="Settings" Command="{Binding SettingsCommand}" Style="{StaticResource HeaderButton}" Margin="14,0,0,0" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="Rig name" Foreground="{StaticResource HeaderMutedTextBrush}" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <TextBlock Text="{Binding RigName}" Foreground="White" FontSize="{DynamicResource FontSizeRigName}" FontWeight="SemiBold" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding RigName}" Foreground="White" FontSize="16" FontWeight="SemiBold" VerticalAlignment="Center" />
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -47,7 +47,7 @@
 
                 <Border Style="{StaticResource Card}">
                     <StackPanel>
-                        <TextBlock Text="Real-time data" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Text="Real time data" Style="{StaticResource SectionTitle}" />
                         <Grid Margin="0,4,0,0">
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
@@ -120,7 +120,7 @@
                                 <DataTrigger Binding="{Binding Status}" Value="Syncing">
                                     <Setter Property="Background" Value="{StaticResource SyncingRowBrush}" />
                                 </DataTrigger>
-                                <DataTrigger Binding="{Binding Status}" Value="Real-time">
+                                <DataTrigger Binding="{Binding Status}" Value="Real time">
                                     <Setter Property="Background" Value="{StaticResource RealTimeRowBrush}" />
                                 </DataTrigger>
                             </Style.Triggers>

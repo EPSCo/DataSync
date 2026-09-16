@@ -56,12 +56,12 @@ namespace DataSync.ViewModels
         private double _syncRate;
         private int _dotFrame;
 
-        public MainViewModel(AppInfo info, string userName, IShell shell, bool designMode)
+        public MainViewModel(AppInfo info, IShell shell, bool designMode)
         {
             _shell = shell;
             _designMode = designMode;
 
-            Title = info.ProgramName + " " + info.Version + " [ " + userName + " ]" + (designMode ? " [UI DESIGN MODE]" : "");
+            Title = info.ProgramName + " " + info.Version + (designMode ? " [UI DESIGN MODE]" : "");
             RigName = info.RigName;
             CurrentTime = DateTime.Now.ToString(TimeFormat);
             RealTimeState = TaskState.Stop.ToString();
