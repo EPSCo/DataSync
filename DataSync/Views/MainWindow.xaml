@@ -111,8 +111,8 @@
         </Grid>
 
         <!-- Ranges and messages -->
-        <TabControl Grid.Row="2" Margin="10" Padding="0" Background="{StaticResource SurfaceBrush}" BorderBrush="{StaticResource LineBrush}">
-            <TabItem Header="Sync table" Padding="10,3">
+        <TabControl Grid.Row="2" Margin="10" Padding="1,0,1,6">
+            <TabItem Header="Sync table">
                 <DataGrid ItemsSource="{Binding Ranges}" BorderThickness="0">
                     <DataGrid.RowStyle>
                         <Style TargetType="DataGridRow">
@@ -136,7 +136,7 @@
                 </DataGrid>
             </TabItem>
 
-            <TabItem Header="Messages" Padding="10,3">
+            <TabItem Header="Messages">
                 <DockPanel>
                     <Border DockPanel.Dock="Top" Padding="6" BorderBrush="{StaticResource LineBrush}" BorderThickness="0,0,0,1">
                         <StackPanel Orientation="Horizontal">

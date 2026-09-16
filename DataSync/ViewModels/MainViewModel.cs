@@ -371,7 +371,7 @@ namespace DataSync.ViewModels
                 row.BaseIdBegin = range.Range.BaseIdBegin;
                 row.BaseIdEnd = isRealTime ? "—" : FormatRecord(hasStart ? range.StartSyncPoint : range.Range.BaseIdEnd);
                 row.CurrentRecord = isRealTime ? FormatRecord(realTimeEnd) : inProgress ? FormatRecord(range.Range.BaseIdEnd) : "—";
-                row.Percent = isRealTime ? new string('.', _dotFrame + 1) : DescribePercent(range, hasStart);
+                row.Percent = isRealTime ? string.Join(" ", Enumerable.Repeat(".", _dotFrame + 1)) : DescribePercent(range, hasStart);
                 row.Status = DescribeStatus(range.Status);
             }
         }
