@@ -396,7 +396,7 @@ namespace DataSync.ViewModels
             var copied = range.StartSyncPoint - range.Range.BaseIdEnd;
             var percent = total > 0 ? Math.Max(0, Math.Min(100, copied * 100.0 / total)) : 0;
             // Rounded down so a range still being copied never shows 100.00.
-            return (Math.Floor(percent * 100) / 100).ToString("0.00", CultureInfo.InvariantCulture);
+            return (Math.Floor(percent * 100) / 100).ToString("0.00", CultureInfo.InvariantCulture) + " %";
         }
 
         /// <summary>Record numbers are grouped in thousands (32,467,044); the Sync table columns do the same.</summary>

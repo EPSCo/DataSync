@@ -130,7 +130,7 @@
                         <DataGridTextColumn Header="Begin record" Binding="{Binding BaseIdBegin, StringFormat={}{0:N0}, ConverterCulture=en-US}" Width="*" ElementStyle="{StaticResource CellText}" />
                         <DataGridTextColumn Header="End record" Binding="{Binding BaseIdEnd}" Width="*" ElementStyle="{StaticResource CellText}" />
                         <DataGridTextColumn Header="Current record" Binding="{Binding CurrentRecord}" Width="*" ElementStyle="{StaticResource CellText}" />
-                        <DataGridTextColumn Header="Percent" Binding="{Binding Percent}" Width="*" ElementStyle="{StaticResource CellText}" />
+                        <DataGridTextColumn Header="Sync Progress" Binding="{Binding Percent}" Width="*" ElementStyle="{StaticResource CellText}" />
                         <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*" ElementStyle="{StaticResource CellText}" />
                     </DataGrid.Columns>
                 </DataGrid>
