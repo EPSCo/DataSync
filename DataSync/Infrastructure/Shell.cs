@@ -15,8 +15,8 @@ namespace DataSync.Infrastructure
 
         void ShowError(string message, string title);
 
-        /// <summary>Yes/No question; true for Yes.</summary>
-        bool Confirm(string message, string title);
+        /// <summary>A question with two buttons; true for the first (Yes).</summary>
+        bool Confirm(string message, string title, string yesText = "Yes", string noText = "No");
 
         /// <summary>Asks for the clear-data password; true when it was entered correctly.</summary>
         bool ConfirmClearData();
@@ -34,21 +34,17 @@ namespace DataSync.Infrastructure
     {
         public void ShowInfo(string message, string title)
         {
-            Show(message, title, MessageBoxImage.Information);
+            Show(message, title, false);
         }
 
         public void ShowError(string message, string title)
         {
-            Show(message, title, MessageBoxImage.Error);
+            Show(message, title, true);
         }
 
-        public bool Confirm(string message, string title)
+        public bool Confirm(string message, string title, string yesText = "Yes", string noText = "No")
         {
-            var owner = ActiveWindow();
-            var result = owner != null
-                ? MessageBox.Show(owner, message, title, MessageBoxButton.YesNo, MessageBoxImage.Question)
-                : MessageBox.Show(message, title, MessageBoxButton.YesNo, MessageBoxImage.Question);
-            return result == MessageBoxResult.Yes;
+            return ShowMessage(new MessageWindow(title, message, yesText, noText, false));
         }
 
         public bool ConfirmClearData()
@@ -74,17 +70,20 @@ namespace DataSync.Infrastructure
             Process.Start("explorer.exe", "\"" + path + "\"");
         }
 
-        private static void Show(string message, string title, MessageBoxImage image)
+        private static void Show(string message, string title, bool isError)
         {
-            var owner = ActiveWindow();
-            if (owner != null)
+            ShowMessage(new MessageWindow(title, message, "OK", null, isError));
+        }
+
+        private static bool ShowMessage(MessageWindow dialog)
+        {
+            dialog.Owner = ActiveWindow();
+            if (dialog.Owner == null)
             {
-                MessageBox.Show(owner, message, title, MessageBoxButton.OK, image);
+                dialog.WindowStartupLocation = WindowStartupLocation.CenterScreen;
             }
-            else
-            {
-                MessageBox.Show(message, title, MessageBoxButton.OK, image);
-            }
+
+            return dialog.ShowDialog() == true;
         }
 
         private static Window ActiveWindow()

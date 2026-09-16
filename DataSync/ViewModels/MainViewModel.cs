@@ -534,7 +534,8 @@ namespace DataSync.ViewModels
 
             AddMessage("Settings saved.");
             // Settings are read at startup (replication, logging, rig name), so they apply after a restart.
-            if (_shell.Confirm("Settings saved. They take effect after the application restarts.\n\nRestart now?", "Settings"))
+            if (_shell.Confirm("Settings saved. They take effect after the application restarts.\n\nRestart now?", "Settings",
+                               "Restart now", "Later"))
             {
                 Restart();
             }
