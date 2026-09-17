@@ -51,6 +51,7 @@
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="Margin" Value="0,1" />
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
     </Style>
 
     <!-- A TaskState value, coloured by state. -->
@@ -79,9 +80,15 @@
         <Setter Property="FontSize" Value="16" />
     </Style>
 
+    <!--
+        Tabular figures: Segoe UI's digits are proportional by default, so record numbers of the same length come out
+        different widths and the columns look ragged. This asks the font for fixed-width digits (the OpenType tnum
+        feature) instead of a monospaced font, so the text stays Segoe UI. Fonts without the feature are unaffected.
+    -->
     <Style x:Key="CellText" TargetType="TextBlock">
         <Setter Property="Margin" Value="8,0" />
         <Setter Property="VerticalAlignment" Value="Center" />
+        <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
     </Style>
 
     <!-- ========== Containers ========== -->
