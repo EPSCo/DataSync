@@ -255,7 +255,7 @@ namespace DataSync.ViewModels
             RealTimeState = status.RealTimeBehind && status.RealTimeState != TaskState.Stop
                 ? "Catching up"
                 : status.RealTimeState.ToString();
-            LastBaseId = FormatRecord(status.LastLocalBaseId);
+            LastBaseId = FormatRecord(RealTimeCurrentRecord(status));
             LastRecordTime = status.LastLocalRecordTime?.ToString(TimeFormat) ?? "";
             SyncState = status.SyncYielding && status.SyncState != TaskState.Stop
                 ? "Waiting for real-time"
@@ -341,9 +341,19 @@ namespace DataSync.ViewModels
             return batchSize + " R" + (adaptive ? "" : " (fixed)") + ", " + rowsPerSecond.ToString("0") + " R/s";
         }
 
+        /// <summary>
+        /// The newest record the real-time task has copied, shown both in the Real time data panel and in the
+        /// real-time row of the Sync Table. NextBaseId is the record after it, so it is only used before the first
+        /// row is saved, when there is no local record yet.
+        /// </summary>
+        private static long RealTimeCurrentRecord(ReplicationStatus status)
+        {
+            return status.LastLocalBaseId > 0 ? status.LastLocalBaseId : status.RealTimeNextBaseId - 1;
+        }
+
         private void UpdateRanges(ReplicationStatus status)
         {
-            var realTimeEnd = Math.Max(status.RealTimeNextBaseId, status.LastLocalBaseId);
+            var realTimeEnd = RealTimeCurrentRecord(status);
             var ranges = status.Ranges.OrderByDescending(r => r.Range.BaseIdBegin).ToList();
             _dotFrame = (_dotFrame + 1) % 3;
 

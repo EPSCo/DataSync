@@ -120,7 +120,8 @@
                                 <DataTrigger Binding="{Binding Status}" Value="Syncing">
                                     <Setter Property="Background" Value="{StaticResource SyncingRowBrush}" />
                                 </DataTrigger>
-                                <DataTrigger Binding="{Binding Status}" Value="Real time">
+                                <!-- The values match the status text from MainViewModel.DescribeStatus. -->
+                                <DataTrigger Binding="{Binding Status}" Value="Real-time">
                                     <Setter Property="Background" Value="{StaticResource RealTimeRowBrush}" />
                                 </DataTrigger>
                             </Style.Triggers>

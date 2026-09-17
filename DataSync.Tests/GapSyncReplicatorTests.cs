@@ -227,6 +227,37 @@ namespace DataSync.Tests
         }
 
         [TestMethod]
+        public void AddGap_RealTimeRangeStartsWhereTheSkippedRangeEnds()
+        {
+            // Regression: the real-time row began at the boundary read when the gap was taken over, which the
+            // real-time task had already moved past, leaving a gap between the rows of the Sync Table.
+            var remote = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 100));
+            var local = new InMemoryProcessDataStore();
+            long boundary = 101;
+            var settings = new ReplicationSettings
+            {
+                SyncRowLimit = 10,
+                AdaptiveBatchSize = false,
+                SyncUpdateInterval = TimeSpan.Zero,
+                MaxRowsPerSecond = 0,
+                GapCheckInterval = GapCheckInterval
+            };
+            var replicator = new GapSyncReplicator(remote, local, () => boundary, settings, message => { });
+            replicator.RunIteration(); // first iteration compares the databases
+
+            // Real-time skipped 101-290 and started again at 291; by the time the sync task takes the range over it
+            // has copied ten more rows, so the boundary it reads is already 301.
+            remote.Add(InMemoryProcessDataStore.Ids(101, 300));
+            local.Add(InMemoryProcessDataStore.Ids(291, 300));
+            replicator.AddGap(new BaseIdRange { BaseIdBegin = 101, BaseIdEnd = 290 });
+            boundary = 301;
+            replicator.RunIteration();
+
+            var realTime = replicator.GetRangesSnapshot().Single(r => r.Status == RangeStatus.RealTime);
+            Assert.AreEqual(291, realTime.Range.BaseIdBegin);
+        }
+
+        [TestMethod]
         public void AddGap_IgnoresRangeAlreadyFoundByComparingDatabases()
         {
             var remote = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 100));

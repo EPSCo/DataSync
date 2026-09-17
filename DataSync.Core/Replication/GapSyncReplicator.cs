@@ -282,6 +282,7 @@ namespace DataSync.Core.Replication
             lock (_lock)
             {
                 var added = false;
+                var realTimeBegin = long.MinValue;
                 while (_pendingGaps.TryDequeue(out var gap))
                 {
                     var known = _ranges.Any(r => r.Status != RangeStatus.RealTime &&
@@ -292,6 +293,9 @@ namespace DataSync.Core.Replication
                         continue;
                     }
                     Log.Debug("Sync queued skipped records " + gap.BaseIdBegin + "-" + gap.BaseIdEnd);
+
+                    // Real-time resumed right above the skipped range; the boundary has moved on since then.
+                    realTimeBegin = Math.Max(realTimeBegin, gap.BaseIdEnd + 1);
 
                     if (_syncingIndex >= 0)
                     {
@@ -318,8 +322,11 @@ namespace DataSync.Core.Replication
                     realTime = new SyncRange { Range = new BaseIdRange(), StartSyncPoint = -1, Status = RangeStatus.RealTime };
                     _ranges.Add(realTime);
                 }
-                realTime.Range.BaseIdBegin = boundary;
-                realTime.Range.BaseIdEnd = boundary;
+                // Where real-time started copying again, not where it has got to: the boundary read here is already a
+                // few records above the skipped range, and the difference would show as a gap in the Sync Table.
+                var begin = realTimeBegin == long.MinValue ? boundary : Math.Min(boundary, realTimeBegin);
+                realTime.Range.BaseIdBegin = begin;
+                realTime.Range.BaseIdEnd = begin;
 
                 _ranges.Sort((a, b) => a.Range.BaseIdBegin.CompareTo(b.Range.BaseIdBegin));
                 SelectNextRange();
