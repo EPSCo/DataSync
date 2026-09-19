@@ -131,14 +131,45 @@
                         </Style>
                     </DataGrid.RowStyle>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Begin" Binding="{Binding BaseIdBegin, StringFormat={}{0:N0}, ConverterCulture=en-US}" Width="*" ElementStyle="{StaticResource CellText}" />
-                        <DataGridTextColumn Header="End" Binding="{Binding BaseIdEnd}" Width="*" ElementStyle="{StaticResource CellText}" />
-                        <DataGridTextColumn Header="Current" Binding="{Binding CurrentRecord}" Width="*" ElementStyle="{StaticResource CellText}" />
-                        <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="*" ElementStyle="{StaticResource CellText}" />
-                        <DataGridTextColumn Header="Total (%)" Binding="{Binding Share}" Width="*" ElementStyle="{StaticResource CellText}" />
-                        <DataGridTextColumn Header="Progress" Binding="{Binding Percent}" Width="*" ElementStyle="{StaticResource CellText}" />
-                        <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*" ElementStyle="{StaticResource CellText}" />
-                        <DataGridTemplateColumn Header="Sync" Width="*" IsReadOnly="False">
+                        <DataGridTextColumn Binding="{Binding BaseIdBegin, StringFormat={}{0:N0}, ConverterCulture=en-US}" Width="*" ElementStyle="{StaticResource CellText}">
+                            <DataGridTextColumn.Header>
+                                <TextBlock Text="Begin" ToolTip="First record number in this range" />
+                            </DataGridTextColumn.Header>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Binding="{Binding BaseIdEnd}" Width="*" ElementStyle="{StaticResource CellText}">
+                            <DataGridTextColumn.Header>
+                                <TextBlock Text="End" ToolTip="Last record number in this range; sync copies backwards from here" />
+                            </DataGridTextColumn.Header>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Binding="{Binding CurrentRecord}" Width="*" ElementStyle="{StaticResource CellText}">
+                            <DataGridTextColumn.Header>
+                                <TextBlock Text="Current" ToolTip="Newest record copied so far; real-time row shows the newest record saved locally" />
+                            </DataGridTextColumn.Header>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Binding="{Binding Count}" Width="*" ElementStyle="{StaticResource CellText}">
+                            <DataGridTextColumn.Header>
+                                <TextBlock Text="Count" ToolTip="Records in this range; real-time row shows Current minus Begin" />
+                            </DataGridTextColumn.Header>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Binding="{Binding Share}" Width="*" ElementStyle="{StaticResource CellText}">
+                            <DataGridTextColumn.Header>
+                                <TextBlock Text="Total (%)" ToolTip="This row's share of all records shown" />
+                            </DataGridTextColumn.Header>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Binding="{Binding Percent}" Width="*" ElementStyle="{StaticResource CellText}">
+                            <DataGridTextColumn.Header>
+                                <TextBlock Text="Progress" ToolTip="Share of this range copied so far" />
+                            </DataGridTextColumn.Header>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Binding="{Binding Status}" Width="*" ElementStyle="{StaticResource CellText}">
+                            <DataGridTextColumn.Header>
+                                <TextBlock Text="Status" ToolTip="Range state: Real-time, Syncing, Queued, Synced or Skipped" />
+                            </DataGridTextColumn.Header>
+                        </DataGridTextColumn>
+                        <DataGridTemplateColumn Width="*" IsReadOnly="False">
+                            <DataGridTemplateColumn.Header>
+                                <TextBlock Text="Sync" ToolTip="Switch a range off to skip it, on to sync it" />
+                            </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <CheckBox IsChecked="{Binding SyncEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
