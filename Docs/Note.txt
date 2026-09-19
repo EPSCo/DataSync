@@ -1,0 +1,14 @@
+DataSync
+========
+Screen Size 768 x 576
+
+---
+
+Since rapid changing the batch size can lead to instability in data transmission, we aim to minimize such fluctuations.
+One approach involves using a moving average for the sync speed (Row/Second); by selecting an appropriate window size, we can reduce these fluctuations.
+The batch size is determined by a multiplier applied to the average speed; for sync task, this multiplier typically ranges from 0.5 to 10.
+As defined in the program, the batch size cannot be just any number (e.g., it follows values like 5, 10, 20, etc.). For instance, if the speed is 4 and the multiplier is 3, the calculated batch size would be 12; since 12 is close to 10, we select a batch size of 10, resulting in an effective multiplier of 2.5 for that.
+If the average speed exceeds 4 over a ten-second window, it indicates that we should switch from a batch size of 5 to 10, or conversely, revert from a batch size of 20 to 10.
+I would like to set up a test lasting a few hours to determine the optimal multiplier.
+We should start by selecting a few multipliers and testing each for twenty minutes. The number of received rows could serve as a good measure.
+Suggested multiplier: 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 8, 10.
