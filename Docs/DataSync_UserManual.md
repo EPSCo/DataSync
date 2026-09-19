@@ -119,6 +119,7 @@ The files are bound to the machine's CPU. If they were created for another machi
 | `CommandTimeout` | Seconds before a database read or save is abandoned as timed out (minimum 5) |
 | `PrioritizeLatestData` | `true` (default): newest records first, skipped records back-filled newest first; `false`: catch up oldest-first, as DDRREP did |
 | `SyncUpdateInterval` | Seconds to pause between sync batches |
+| `RateWindow` | Seconds of one-second samples averaged for the copy rate (rows/s) shown next to the batch sizes (default 10) |
 | `MaxRowsPerSecond` | Copy rate limit per task (0 = unlimited) |
 | `GapCheckInterval` | Minutes between checks for new gaps |
 | `TimeoutCounterLimit` | Consecutive failures before restart (skipped while a database is unreachable) |

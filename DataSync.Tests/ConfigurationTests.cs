@@ -20,6 +20,7 @@ namespace DataSync.Tests
                 RealTimeBatchMultiplier = "5",
                 SyncBatchMeasurements = "3",
                 CommandTimeout = "60",
+                RateWindow = " 10 ",
                 GapCheckInterval = "10",
                 TimeoutCounterLimit = "10",
                 LogPathDir = "logs",
@@ -57,6 +58,10 @@ namespace DataSync.Tests
             StringAssert.StartsWith(settings.Validate(), "Command timeout");
 
             settings = ValidSettings();
+            settings.RateWindow = "0";
+            StringAssert.StartsWith(settings.Validate(), "Rate window");
+
+            settings = ValidSettings();
             settings.RealTimeBatchMultiplier = "0";
             StringAssert.StartsWith(settings.Validate(), "Real-time batch multiplier");
 
@@ -82,6 +87,7 @@ namespace DataSync.Tests
             Assert.AreEqual("true", values[SettingKeys.RollOnFileSizeLimit]);
             Assert.AreEqual("true", values[SettingKeys.AdaptiveBatchSize]);
             Assert.AreEqual("60", values[SettingKeys.CommandTimeout]);
+            Assert.AreEqual("10", values[SettingKeys.RateWindow]);
             Assert.AreEqual("Debug", values[SettingKeys.LogLevel]);
         }
 

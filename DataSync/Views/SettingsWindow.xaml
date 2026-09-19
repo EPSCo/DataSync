@@ -111,6 +111,7 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0" Text="Adaptive batch size" Style="{StaticResource FieldLabel}"
@@ -131,6 +132,10 @@
                                    ToolTip="Measurements (each at least 5 reads and 5 s) a new sync batch size is judged over before it is kept. More: steadier sizes, slower reactions" />
                         <TextBox Grid.Row="3" Grid.Column="1" IsEnabled="{Binding IsChecked, ElementName=AdaptiveCheckBox}"
                                  Text="{Binding SyncBatchMeasurements, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="5" Text="Rate window (s)" Style="{StaticResource FieldLabel}"
+                                   ToolTip="The rows/second shown is the rows copied over this many seconds, divided by that time. Higher: steadier rate, slower to follow changes" />
+                        <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding RateWindow, UpdateSourceTrigger=PropertyChanged}" />
 
                         <TextBlock Grid.Row="4" Text="Command timeout (s)" Style="{StaticResource FieldLabel}"
                                    ToolTip="Seconds before a database read or save is abandoned as timed out" />

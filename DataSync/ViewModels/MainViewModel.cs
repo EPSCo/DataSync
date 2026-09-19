@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using System.Windows.Threading;
 using DataSync.Core.Data;
+using DataSync.Core.Configuration;
 using DataSync.Core.Logging;
 using DataSync.Core.Models;
 using DataSync.Core.Replication;
@@ -30,7 +31,6 @@ namespace DataSync.ViewModels
         private readonly bool _designMode;
         private readonly ConcurrentQueue<string> _pendingMessages = new ConcurrentQueue<string>();
         private readonly DispatcherTimer _timer;
-        private readonly Stopwatch _rateClock = new Stopwatch();
 
         private ReplicationEngine _engine;
         private Func<ReplicationStatus> _getStatus;
@@ -50,10 +50,9 @@ namespace DataSync.ViewModels
         private string _syncButtonText = "Pause sync task";
         private string _realTimeBatch = "-";
         private string _syncBatch = "-";
-        private long _realTimeRowsCopied;
-        private long _syncRowsCopied;
-        private double _realTimeRate;
-        private double _syncRate;
+        private readonly Queue<RatePoint> _realTimeRateHistory = new Queue<RatePoint>();
+        private readonly Queue<RatePoint> _syncRateHistory = new Queue<RatePoint>();
+        private readonly double _rateWindowSeconds = Math.Max(1, AppSettings.GetInt(SettingKeys.RateWindow, 10));
         private int _dotFrame;
         private long _togglingBegin = long.MinValue; // range whose toggle was just clicked, kept until the engine confirms
         private bool _togglingEnabled;
@@ -321,24 +320,50 @@ namespace DataSync.ViewModels
 
         private void UpdateBatchInfo(ReplicationStatus status)
         {
-            // Rates from the change in running totals between timer ticks, smoothed over a few seconds.
-            var seconds = _rateClock.Elapsed.TotalSeconds;
-            if (_rateClock.IsRunning && seconds > 0)
-            {
-                _realTimeRate = Smooth(_realTimeRate, (status.RealTimeRowsCopied - _realTimeRowsCopied) / seconds);
-                _syncRate = Smooth(_syncRate, (status.SyncRowsCopied - _syncRowsCopied) / seconds);
-            }
-            _realTimeRowsCopied = status.RealTimeRowsCopied;
-            _syncRowsCopied = status.SyncRowsCopied;
-            _rateClock.Restart();
+            // Copy rates, updated every second. The engine's running totals only change when a batch finishes, so the
+            // rate is the rows copied over the whole RateWindow (SettingKeys.RateWindow, in seconds) divided by that
+            // time: a finished batch keeps contributing to the rate for as long as it stays inside the window, which
+            // steadies the display between batches.
+            Record(_realTimeRateHistory, status.RealTimeRowsCopied);
+            Record(_syncRateHistory, status.SyncRowsCopied);
 
-            RealTimeBatch = FormatBatch(status.RealTimeBatchSize, status.AdaptiveBatchSize, _realTimeRate);
-            SyncBatch = FormatBatch(status.SyncBatchSize, status.AdaptiveBatchSize, _syncRate);
+            RealTimeBatch = FormatBatch(status.RealTimeBatchSize, status.AdaptiveBatchSize, Rate(_realTimeRateHistory));
+            SyncBatch = FormatBatch(status.SyncBatchSize, status.AdaptiveBatchSize, Rate(_syncRateHistory));
         }
 
-        private static double Smooth(double previous, double sample)
+        private void Record(Queue<RatePoint> history, long totalRows)
         {
-            return 0.3 * sample + 0.7 * previous;
+            var now = DateTime.UtcNow;
+            history.Enqueue(new RatePoint(now, totalRows));
+            while (history.Count > 1 && (now - history.Peek().Time).TotalSeconds > _rateWindowSeconds)
+            {
+                history.Dequeue();
+            }
+        }
+
+        private static double Rate(Queue<RatePoint> history)
+        {
+            if (history.Count == 0)
+            {
+                return 0;
+            }
+
+            var oldest = history.Peek();
+            var newest = history.Last();
+            var seconds = (newest.Time - oldest.Time).TotalSeconds;
+            return seconds <= 0 ? 0 : (newest.Rows - oldest.Rows) / seconds;
+        }
+
+        private readonly struct RatePoint
+        {
+            public RatePoint(DateTime time, long rows)
+            {
+                Time = time;
+                Rows = rows;
+            }
+
+            public DateTime Time { get; }
+            public long Rows { get; }
         }
 
         private static string FormatBatch(int batchSize, bool adaptive, double rowsPerSecond)
@@ -360,7 +385,7 @@ namespace DataSync.ViewModels
         {
             var realTimeEnd = RealTimeCurrentRecord(status);
             var ranges = status.Ranges.OrderByDescending(r => r.Range.BaseIdBegin).ToList();
-            _dotFrame = (_dotFrame + 1) % 3;
+            _dotFrame = (_dotFrame + 1) % 5;
 
             // Count is the full size of each range (stable while it syncs), except Real-time which is
             // Current - Begin (records copied by the real-time task since this boundary); Share is its part of all rows shown.

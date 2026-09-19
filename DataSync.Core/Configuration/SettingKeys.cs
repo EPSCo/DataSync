@@ -29,6 +29,7 @@ namespace DataSync.Core.Configuration
         public const string MinRowLimit = "MinRowLimit";
         public const string RealTimeBatchMultiplier = "RealTimeBatchMultiplier";
         public const string SyncBatchMeasurements = "SyncBatchMeasurements";
+        public const string RateWindow = "RateWindow";
         public const string CommandTimeout = "CommandTimeout";
         public const string PrioritizeLatestData = "PrioritizeLatestData";
         public const string LogLevel = "LogLevel";

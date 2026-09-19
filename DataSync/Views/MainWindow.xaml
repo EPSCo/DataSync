@@ -175,7 +175,7 @@
                                 <TextBlock Text="Progress" ToolTip="Sync Progress" Style="{StaticResource ColumnHeaderText}" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
-                        <DataGridTextColumn x:Name="StatusColumn" Binding="{Binding Status}" Width="*" ElementStyle="{StaticResource CellTextCenter}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
+                        <DataGridTextColumn x:Name="StatusColumn" Binding="{Binding Status}" Width="*" ElementStyle="{StaticResource CellTextLeft}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
                                 <TextBlock Text="Status" ToolTip="Range state" Style="{StaticResource ColumnHeaderText}" />
                             </DataGridTextColumn.Header>

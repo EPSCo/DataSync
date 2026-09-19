@@ -98,18 +98,15 @@
         <Setter Property="TextAlignment" Value="Center" />
     </Style>
 
-    <!--
-        Right-aligned numbers (Begin, End, Current, Count, Total). Cells without a value show an
-        em dash ("—", see MainViewModel) which is centered instead via the trigger below.
-    -->
+    <Style x:Key="CellTextLeft" TargetType="TextBlock" BasedOn="{StaticResource CellText}">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="TextAlignment" Value="Left" />
+    </Style>
+
+    <!-- Right-aligned numbers (Begin, End, Current, Count, Total). Cells without a value (em dash) stay right-aligned. -->
     <Style x:Key="CellTextRight" TargetType="TextBlock" BasedOn="{StaticResource CellText}">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="TextAlignment" Value="Right" />
-        <Style.Triggers>
-            <Trigger Property="Text" Value="—">
-                <Setter Property="TextAlignment" Value="Center" />
-            </Trigger>
-        </Style.Triggers>
     </Style>
 
     <Style x:Key="ColumnHeaderCenter" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">

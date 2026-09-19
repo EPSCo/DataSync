@@ -36,6 +36,9 @@ namespace DataSync.Core.Configuration
         /// <summary>Seconds.</summary>
         public string CommandTimeout { get; set; }
 
+        /// <summary>One-second samples averaged for the displayed copy rate (rows/s).</summary>
+        public string RateWindow { get; set; }
+
         /// <summary>Minutes.</summary>
         public string GapCheckInterval { get; set; }
         public string TimeoutCounterLimit { get; set; }
@@ -66,6 +69,7 @@ namespace DataSync.Core.Configuration
                 RealTimeBatchMultiplier = replication.RealTimeBatchMultiplier.ToString(Invariant),
                 SyncBatchMeasurements  = replication.SyncBatchMeasurements.ToString(Invariant),
                 CommandTimeout         = ((long)replication.CommandTimeout.TotalSeconds).ToString(Invariant),
+                RateWindow             = AppSettings.GetInt(SettingKeys.RateWindow, 10).ToString(Invariant),
                 GapCheckInterval       = ((long)replication.GapCheckInterval.TotalMinutes).ToString(Invariant),
                 TimeoutCounterLimit    = replication.FailureLimit.ToString(Invariant),
                 LogPathDir             = AppSettings.GetString(SettingKeys.LogPathDir, "logs"),
@@ -93,6 +97,7 @@ namespace DataSync.Core.Configuration
                    ?? CheckInt(RealTimeBatchMultiplier, 1, "Real-time batch multiplier")
                    ?? CheckInt(SyncBatchMeasurements, 1, "Sync batch measurements")
                    ?? CheckInt(CommandTimeout, 5, "Command timeout")
+                   ?? CheckInt(RateWindow, 1, "Rate window")
                    ?? CheckInt(GapCheckInterval, 1, "Gap check interval")
                    ?? CheckInt(TimeoutCounterLimit, 0, "Failures before restart")
                    ?? CheckLogDirectory()
@@ -118,6 +123,7 @@ namespace DataSync.Core.Configuration
                 [SettingKeys.RealTimeBatchMultiplier] = NormalizeInt(RealTimeBatchMultiplier),
                 [SettingKeys.SyncBatchMeasurements]  = NormalizeInt(SyncBatchMeasurements),
                 [SettingKeys.CommandTimeout]         = NormalizeInt(CommandTimeout),
+                [SettingKeys.RateWindow]             = NormalizeInt(RateWindow),
                 [SettingKeys.GapCheckInterval]       = NormalizeInt(GapCheckInterval),
                 [SettingKeys.TimeoutCounterLimit]    = NormalizeInt(TimeoutCounterLimit),
                 [SettingKeys.LogPathDir]             = LogPathDir.Trim(),
