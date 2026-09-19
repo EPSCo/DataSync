@@ -53,6 +53,9 @@ namespace DataSync.Tests
 
             var snapshot = replicator.GetRangesSnapshot();
             Assert.IsFalse(snapshot.First(r => r.Range.BaseIdBegin == 61).SyncEnabled);
+            var syncing = snapshot.First(r => r.Status == RangeStatus.Syncing);
+            Assert.AreEqual(11, syncing.Range.BaseIdBegin); // focus moved to the next enabled range
+            Assert.AreEqual(syncing.Range.BaseIdEnd, replicator.NextBaseId); // cursor belongs to that range
 
             RunUntilIdle(replicator); // copies 11-50, leaves 61-100 alone
             Assert.IsFalse(local.BaseIds.Contains(61));

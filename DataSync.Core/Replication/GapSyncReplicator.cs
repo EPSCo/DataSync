@@ -211,8 +211,15 @@ namespace DataSync.Core.Replication
             long windowBegin;
             long windowEnd;
             var requested = Batch.Current;
+            SyncRange syncing;
             lock (_lock)
             {
+                if (_syncingIndex < 0 || _syncingIndex >= _ranges.Count ||
+                    _ranges[_syncingIndex].Status != RangeStatus.Syncing)
+                {
+                    ReassertSyncing();
+                }
+
                 if (_syncingIndex < 0)
                 {
                     // Nothing left to back-fill: look again for gaps (e.g. rows the remote wrote late) after a while.
@@ -226,8 +233,15 @@ namespace DataSync.Core.Replication
                     return Settings.GapCheckInterval;
                 }
 
+                syncing = _ranges[_syncingIndex];
                 windowEnd = _nextBaseId;
-                windowBegin = Math.Max(windowEnd - requested + 1, _ranges[_syncingIndex].Range.BaseIdBegin);
+                // A toggle may have switched ranges after the cursor was set; never read above the new range.
+                if (windowEnd > syncing.Range.BaseIdEnd)
+                {
+                    windowEnd = syncing.Range.BaseIdEnd;
+                    _nextBaseId = windowEnd;
+                }
+                windowBegin = Math.Max(windowEnd - requested + 1, syncing.Range.BaseIdBegin);
             }
 
             State = TaskState.Downloading;
@@ -265,23 +279,36 @@ namespace DataSync.Core.Replication
                       FormatSeconds(readTime) + ", saved in " + FormatSeconds(stopwatch.Elapsed - readTime));
 
             // Every row the remote has in the window is now saved (an empty result means it has none there).
+            // The window belongs to the range the read started from: if the toggle switched ranges mid-read,
+            // the rows are still applied to that same range object (no SaveBatch happens twice).
             lock (_lock)
             {
-                var current = _ranges[_syncingIndex];
-                if (windowBegin <= current.Range.BaseIdBegin)
+                if (syncing.Status != RangeStatus.Syncing && syncing.Status != RangeStatus.NotSync)
                 {
-                    _disabledBegins.Remove(current.Range.BaseIdBegin);
-                    current.Status = RangeStatus.Synced;
-                    current.Range.BaseIdEnd = current.StartSyncPoint;
-                    current.StartSyncPoint = -1;
-                    Log.Information("Sync finished records " + current.Range.BaseIdBegin + "-" + current.Range.BaseIdEnd);
+                    // The range finished while the read was in flight (e.g. a refresh merged it); nothing to advance.
+                    return OnSuccess(rows.Count, false, Settings.SyncUpdateInterval, stopwatch.Elapsed);
+                }
+
+                if (windowBegin <= syncing.Range.BaseIdBegin)
+                {
+                    _disabledBegins.Remove(syncing.Range.BaseIdBegin);
+                    syncing.Status = RangeStatus.Synced;
+                    syncing.Range.BaseIdEnd = syncing.StartSyncPoint;
+                    syncing.StartSyncPoint = -1;
+                    Log.Information("Sync finished records " + syncing.Range.BaseIdBegin + "-" + syncing.Range.BaseIdEnd);
                     SyncRangePlanner.MergeSynced(_ranges);
+                    // The merge may have moved ranges; if this range survived, it is still the one being copied.
+                    _syncingIndex = _ranges.IndexOf(syncing);
+                    _nextBaseId = _syncingIndex >= 0 ? syncing.Range.BaseIdEnd : -1;
                     SelectNextRange();
                 }
                 else
                 {
-                    current.Range.BaseIdEnd = windowBegin - 1;
-                    _nextBaseId = current.Range.BaseIdEnd;
+                    syncing.Range.BaseIdEnd = windowBegin - 1;
+                    if (_syncingIndex >= 0 && _syncingIndex < _ranges.Count && ReferenceEquals(_ranges[_syncingIndex], syncing))
+                    {
+                        _nextBaseId = syncing.Range.BaseIdEnd;
+                    }
                 }
             }
 
@@ -338,6 +365,7 @@ namespace DataSync.Core.Replication
             var boundary = _getBoundary();
             lock (_lock)
             {
+                ReassertSyncing();
                 var added = false;
                 var realTimeBegin = long.MinValue;
                 while (_pendingGaps.TryDequeue(out var gap))
@@ -390,27 +418,66 @@ namespace DataSync.Core.Replication
             }
         }
 
-        // Caller holds _lock.
+        // Caller holds _lock. Picks the next range only when nothing is being copied; otherwise it only
+        // re-points the cursor at the Syncing range (range lists are rebuilt/sorted, so the index goes stale).
         private void SelectNextRange()
         {
-            _syncingIndex = SyncRangePlanner.FindNextRangeIndex(_ranges);
+            var index = _ranges.FindIndex(r => r.Status == RangeStatus.Syncing);
+            if (index >= 0)
+            {
+                _syncingIndex = index;
+                _nextBaseId = _ranges[index].Range.BaseIdEnd;
+            }
+            else
+            {
+                _syncingIndex = SyncRangePlanner.FindNextRangeIndex(_ranges);
+                if (_syncingIndex >= 0)
+                {
+                    var range = _ranges[_syncingIndex];
+                    range.Status = RangeStatus.Syncing;
+                    _nextBaseId = range.Range.BaseIdEnd;
+                }
+                else
+                {
+                    _nextBaseId = -1;
+                }
+            }
+
             if (_syncingIndex >= 0)
             {
                 var range = _ranges[_syncingIndex];
-                range.Status = RangeStatus.Syncing;
-                _nextBaseId = range.Range.BaseIdEnd;
 
                 if (range.Range.BaseIdBegin != _loggedRangeBegin)
                 {
                     _loggedRangeBegin = range.Range.BaseIdBegin;
                     Log.Information("Sync copying records " + range.Range.BaseIdBegin + "-" + range.Range.BaseIdEnd + " (" +
-                                    (range.Range.BaseIdEnd - range.Range.BaseIdBegin + 1) + "), newest first");
+                                    (range.Range.BaseIdEnd - range.Range.BaseIdBegin + 1) + "), newest first" +
+                                    (range.SyncEnabled ? "" : " [UNEXPECTED: disabled]"));
                 }
             }
             else
             {
                 _nextBaseId = -1;
             }
+        }
+
+        /// <summary>
+        /// Makes _syncingIndex point at the Syncing range again (there is at most one). Caller holds _lock.
+        /// Range refreshes rebuild the list, and a disabled Syncing range is demoted to NotSync, so the stored
+        /// index can also point at the wrong row; without this the next read would use another range's cursor.
+        /// </summary>
+        private void ReassertSyncing()
+        {
+            var index = _ranges.FindIndex(r => r.Status == RangeStatus.Syncing);
+            if (index >= 0)
+            {
+                _syncingIndex = index;
+                _nextBaseId = _ranges[index].Range.BaseIdEnd;
+                return;
+            }
+
+            _syncingIndex = -1;
+            _nextBaseId = -1;
         }
 
         /// <summary>Also moves the time spent waiting for real-time into this summary.</summary>
