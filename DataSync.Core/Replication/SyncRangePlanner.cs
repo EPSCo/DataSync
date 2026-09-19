@@ -108,7 +108,8 @@ namespace DataSync.Core.Replication
         }
 
         /// <summary>
-        /// Index of the NotSync range with the highest BaseIdBegin (newest data first), or -1 if there is none.
+        /// Index of the newest enabled NotSync range (highest BaseIdBegin), or -1 if there is none. Ranges the user
+        /// switched off in the Sync Table are skipped until switched back on.
         /// </summary>
         public static int FindNextRangeIndex(IList<SyncRange> ranges)
         {
@@ -118,7 +119,7 @@ namespace DataSync.Core.Replication
             for (var i = 0; i < ranges.Count; i++)
             {
                 var item = ranges[i];
-                if (item.Status == RangeStatus.NotSync && item.Range.BaseIdBegin > maxBaseIdBegin)
+                if (item.SyncEnabled && item.Status == RangeStatus.NotSync && item.Range.BaseIdBegin > maxBaseIdBegin)
                 {
                     maxBaseIdBegin = item.Range.BaseIdBegin;
                     maxIndex = i;
@@ -130,7 +131,9 @@ namespace DataSync.Core.Replication
 
         public static SyncRange Copy(SyncRange item)
         {
-            return Create(item.Range.BaseIdBegin, item.Range.BaseIdEnd, item.StartSyncPoint, item.Status);
+            var copy = Create(item.Range.BaseIdBegin, item.Range.BaseIdEnd, item.StartSyncPoint, item.Status);
+            copy.SyncEnabled = item.SyncEnabled;
+            return copy;
         }
 
         private static SyncRange Create(long begin, long end, long startSyncPoint, RangeStatus status)

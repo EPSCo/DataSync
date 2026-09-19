@@ -42,6 +42,45 @@ namespace DataSync.Tests
         }
 
         [TestMethod]
+        public void SetRangeEnabled_SkipsDisabledRangeUntilReEnabled()
+        {
+            var remote = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 100));
+            var local = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 10).Concat(InMemoryProcessDataStore.Ids(51, 60)));
+            var replicator = Create(remote, local, boundary: 101);
+
+            replicator.RunIteration(); // builds ranges, starts the newest gap (61-100)
+            replicator.SetRangeEnabled(61, false);
+
+            var snapshot = replicator.GetRangesSnapshot();
+            Assert.IsFalse(snapshot.First(r => r.Range.BaseIdBegin == 61).SyncEnabled);
+
+            RunUntilIdle(replicator); // copies 11-50, leaves 61-100 alone
+            Assert.IsFalse(local.BaseIds.Contains(61));
+            Assert.IsTrue(local.BaseIds.Contains(11));
+
+            replicator.SetRangeEnabled(61, true);
+            RunUntilIdle(replicator);
+
+            CollectionAssert.AreEqual(remote.BaseIds, local.BaseIds);
+        }
+
+        [TestMethod]
+        public void FindNextRangeIndex_SkipsDisabledRanges()
+        {
+            var ranges = SyncRangePlanner.Build(new[] { R(1, 100) }, new[] { R(21, 40), R(61, 80) });
+            ranges.First(r => r.Range.BaseIdBegin == 81).SyncEnabled = false;
+
+            var index = SyncRangePlanner.FindNextRangeIndex(ranges);
+
+            Assert.AreEqual(41, ranges[index].Range.BaseIdBegin);
+        }
+
+        private static BaseIdRange R(long begin, long end)
+        {
+            return new BaseIdRange { BaseIdBegin = begin, BaseIdEnd = end };
+        }
+
+        [TestMethod]
         public void RunIteration_CopiesNewestGapFirstReadingBackwards()
         {
             var remote = new InMemoryProcessDataStore(InMemoryProcessDataStore.Ids(1, 100));

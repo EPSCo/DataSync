@@ -56,6 +56,14 @@ namespace DataSync.Core.Replication
             _sync.RequestStop();
         }
 
+        /// <summary>
+        /// Switches one sync range off (skip it) or back on. The task picks it up on its next iteration.
+        /// </summary>
+        public void SetRangeEnabled(long baseIdBegin, bool enabled)
+        {
+            _sync.SetRangeEnabled(baseIdBegin, enabled);
+        }
+
         public void ResumeSync()
         {
             if (_sync.State != TaskState.Stop || !WaitForStop(_sync.Completion))

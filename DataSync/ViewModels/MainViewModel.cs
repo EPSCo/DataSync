@@ -55,6 +55,9 @@ namespace DataSync.ViewModels
         private double _realTimeRate;
         private double _syncRate;
         private int _dotFrame;
+        private long _togglingBegin = long.MinValue; // range whose toggle was just clicked, kept until the engine confirms
+        private bool _togglingEnabled;
+        private int _togglingTicks;
 
         public MainViewModel(AppInfo info, IShell shell, bool designMode)
         {
@@ -69,6 +72,7 @@ namespace DataSync.ViewModels
             LastBaseId = "-1";
 
             ToggleSyncCommand = new RelayCommand(ToggleSync, () => _engine != null && !IsBusy);
+            ToggleRangeSyncCommand = new RelayCommand<SyncRangeRow>(ToggleRangeSync, row => row != null && row.SyncToggleEnabled);
             TestRemoteConnectionCommand = new RelayCommand(() => TestConnection(ConnectionKind.Remote), () => !_designMode && !IsBusy);
             TestLocalConnectionCommand = new RelayCommand(() => TestConnection(ConnectionKind.Local), () => !_designMode && !IsBusy);
             ClearLocalDataCommand = new RelayCommand(ClearLocalData, () => !_designMode && !IsBusy);
@@ -91,6 +95,7 @@ namespace DataSync.ViewModels
         public ObservableCollection<string> Messages { get; } = new ObservableCollection<string>();
 
         public ICommand ToggleSyncCommand { get; }
+        public ICommand ToggleRangeSyncCommand { get; }
         public ICommand TestRemoteConnectionCommand { get; }
         public ICommand TestLocalConnectionCommand { get; }
         public ICommand ClearLocalDataCommand { get; }
@@ -357,6 +362,15 @@ namespace DataSync.ViewModels
             var ranges = status.Ranges.OrderByDescending(r => r.Range.BaseIdBegin).ToList();
             _dotFrame = (_dotFrame + 1) % 3;
 
+            // Count is the full size of each range (stable while it syncs); Share is its part of all rows shown.
+            var sizes = new long[ranges.Count];
+            long total = 0;
+            for (var i = 0; i < ranges.Count; i++)
+            {
+                sizes[i] = RangeSize(ranges[i]);
+                total += sizes[i];
+            }
+
             while (Ranges.Count > ranges.Count)
             {
                 Ranges.RemoveAt(Ranges.Count - 1);
@@ -381,9 +395,75 @@ namespace DataSync.ViewModels
                 row.BaseIdBegin = range.Range.BaseIdBegin;
                 row.BaseIdEnd = isRealTime ? "—" : FormatRecord(hasStart ? range.StartSyncPoint : range.Range.BaseIdEnd);
                 row.CurrentRecord = isRealTime ? FormatRecord(realTimeEnd) : inProgress ? FormatRecord(range.Range.BaseIdEnd) : "—";
+                row.Count = isRealTime ? "—" : FormatRecord(sizes[i]);
+                row.Share = isRealTime ? "—" : DescribeShare(sizes[i], total);
                 row.Percent = isRealTime ? string.Join(" ", Enumerable.Repeat(".", _dotFrame + 1)) : DescribePercent(range, hasStart);
                 row.Status = DescribeStatus(range.Status);
+                // Toggles only switch NotSync/Syncing ranges; Real-time and Synced rows are dimmed (disabled).
+                var canToggle = range.Status == RangeStatus.NotSync || range.Status == RangeStatus.Syncing;
+                row.SyncToggleEnabled = canToggle;
+                if (canToggle && _togglingBegin == range.Range.BaseIdBegin &&
+                    Environment.TickCount - _togglingTicks < 5000)
+                {
+                    // While a toggle is being sent, keep the clicked state so the switch does not flicker back.
+                    row.SyncEnabled = _togglingEnabled;
+                }
+                else
+                {
+                    row.SyncEnabled = canToggle && range.SyncEnabled;
+                    if (_togglingBegin == range.Range.BaseIdBegin)
+                    {
+                        _togglingBegin = long.MinValue; // confirmed by the engine (or row changed state)
+                    }
+                }
             }
+        }
+
+        /// <summary>
+        /// Switches one range off (the sync task skips it) or back on. Disabled Real-time/Synced rows cannot run this.
+        /// </summary>
+        private void ToggleRangeSync(SyncRangeRow row)
+        {
+            if (row == null || !row.SyncToggleEnabled)
+            {
+                return;
+            }
+
+            var enabled = row.SyncEnabled;
+            _togglingBegin = row.BaseIdBegin;
+            _togglingEnabled = enabled;
+            _togglingTicks = Environment.TickCount;
+
+            if (_designMode || _engine == null)
+            {
+                return; // design sample data: the switch still flips, there is just no engine to tell
+            }
+
+            Task.Run(() => _engine.SetRangeEnabled(row.BaseIdBegin, enabled));
+            AddMessage("Sync " + (enabled ? "enabled" : "disabled") + " for records from " + FormatRecord(row.BaseIdBegin) + ".");
+        }
+
+        /// <summary>
+        /// Full size of a range (BaseIDs, inclusive). Sync copies backwards from StartSyncPoint while BaseIdEnd
+        /// moves down as progress, so the size uses StartSyncPoint to stay stable while the row syncs.
+        /// </summary>
+        private static long RangeSize(SyncRange range)
+        {
+            var end = range.StartSyncPoint > 0 ? range.StartSyncPoint : range.Range.BaseIdEnd;
+            return Math.Max(0, end - range.Range.BaseIdBegin + 1);
+        }
+
+        /// <summary>Part of all rows shown in the Sync Table (0.00 %).</summary>
+        private static string DescribeShare(long size, long total)
+        {
+            if (total <= 0)
+            {
+                return "—";
+            }
+
+            var percent = Math.Max(0, Math.Min(100, size * 100.0 / total));
+            // Rounded down like Sync Progress so the shares never add up past 100.00.
+            return (Math.Floor(percent * 100) / 100).ToString("0.00", CultureInfo.InvariantCulture) + " %";
         }
 
         /// <summary>

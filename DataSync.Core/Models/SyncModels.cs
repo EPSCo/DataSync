@@ -39,5 +39,8 @@ namespace DataSync.Core.Models
         public long StartSyncPoint { get; set; }
 
         public RangeStatus Status { get; set; }
+
+        /// <summary>False when the user switched this range off in the Sync Table; the sync task skips it.</summary>
+        public bool SyncEnabled { get; set; } = true;
     }
 }

@@ -10,8 +10,12 @@ namespace DataSync.ViewModels
         private long _baseIdBegin;
         private string _baseIdEnd;
         private string _currentRecord;
+        private string _count;
+        private string _share;
         private string _percent;
         private string _status;
+        private bool _syncEnabled = true;
+        private bool _syncToggleEnabled = true;
 
         public long BaseIdBegin
         {
@@ -31,6 +35,18 @@ namespace DataSync.ViewModels
             set { SetProperty(ref _currentRecord, value); }
         }
 
+        public string Count
+        {
+            get { return _count; }
+            set { SetProperty(ref _count, value); }
+        }
+
+        public string Share
+        {
+            get { return _share; }
+            set { SetProperty(ref _share, value); }
+        }
+
         public string Percent
         {
             get { return _percent; }
@@ -41,6 +57,20 @@ namespace DataSync.ViewModels
         {
             get { return _status; }
             set { SetProperty(ref _status, value); }
+        }
+
+        /// <summary>Range toggle: on = the sync task copies this range, off = it skips it.</summary>
+        public bool SyncEnabled
+        {
+            get { return _syncEnabled; }
+            set { SetProperty(ref _syncEnabled, value); }
+        }
+
+        /// <summary>False for Real-time and Synced rows, whose toggle is dimmed (disabled).</summary>
+        public bool SyncToggleEnabled
+        {
+            get { return _syncToggleEnabled; }
+            set { SetProperty(ref _syncToggleEnabled, value); }
         }
     }
 }

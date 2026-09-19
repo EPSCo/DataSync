@@ -75,7 +75,9 @@ The files are bound to the machine's CPU. If they were created for another machi
 - **Real-time data**: copies new remote rows as they appear. It shows the last copied record and its time.
 - **Historical data**: back-fills older records missing locally, newest first. *Pause/Resume sync task* stops
   and restarts it. The real-time task keeps running.
-- **Sync table** tab: the record ranges and their state. *Syncing* rows are yellow, the *Real-time* row is green.
+- **Sync table** tab: the record ranges and their state. *Count* is the records in the range, *Share* its
+  part of all rows shown. The *Sync* switch skips a range (off) or syncs it (on); it is dimmed for *Real-time*
+  and *Synced* rows. *Syncing* rows are yellow, the *Real-time* row is green.
 - **Messages** tab: recent events and errors, newest first. *Open log folder* opens the folder with the full log
   files (see [Logs and troubleshooting](#logs-and-troubleshooting)).
 - **Test remote / local connection**: checks a database connection.

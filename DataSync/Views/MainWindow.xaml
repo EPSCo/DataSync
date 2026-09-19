@@ -131,8 +131,22 @@
                         <DataGridTextColumn Header="Begin record" Binding="{Binding BaseIdBegin, StringFormat={}{0:N0}, ConverterCulture=en-US}" Width="*" ElementStyle="{StaticResource CellText}" />
                         <DataGridTextColumn Header="End record" Binding="{Binding BaseIdEnd}" Width="*" ElementStyle="{StaticResource CellText}" />
                         <DataGridTextColumn Header="Current record" Binding="{Binding CurrentRecord}" Width="*" ElementStyle="{StaticResource CellText}" />
+                        <DataGridTextColumn Header="Count" Binding="{Binding Count}" Width="*" ElementStyle="{StaticResource CellText}" />
+                        <DataGridTextColumn Header="Share" Binding="{Binding Share}" Width="*" ElementStyle="{StaticResource CellText}" />
                         <DataGridTextColumn Header="Sync Progress" Binding="{Binding Percent}" Width="*" ElementStyle="{StaticResource CellText}" />
                         <DataGridTextColumn Header="Status" Binding="{Binding Status}" Width="*" ElementStyle="{StaticResource CellText}" />
+                        <DataGridTemplateColumn Header="Sync" Width="*" IsReadOnly="False">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding SyncEnabled, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                                              IsEnabled="{Binding SyncToggleEnabled}"
+                                              Command="{Binding DataContext.ToggleRangeSyncCommand, RelativeSource={RelativeSource AncestorType=DataGrid}}"
+                                              CommandParameter="{Binding}"
+                                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                                              ToolTip="Switch this range off to skip it, on to sync it" />
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
                     </DataGrid.Columns>
                 </DataGrid>
             </TabItem>

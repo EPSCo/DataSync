@@ -37,6 +37,7 @@ namespace DataSync.Core.Replication
         private volatile bool _refreshRequested = true;
         private bool _recheckGaps; // task thread only: idle, so compare the databases again at the next iteration
         private int _isYielding;
+        private readonly HashSet<long> _disabledBegins = new HashSet<long>(); // ranges the user switched off, by BaseIdBegin
 
         // Task thread only: for the log.
         private readonly Stopwatch _yieldClock = new Stopwatch();
@@ -88,6 +89,49 @@ namespace DataSync.Core.Replication
         /// True while the task is waiting for the real-time task to catch up or recover.
         /// </summary>
         public bool IsYielding => Volatile.Read(ref _isYielding) != 0;
+
+        /// <summary>
+        /// Switches one range off (skip it) or back on, identified by its BaseIdBegin. The choice is kept across
+        /// range refreshes until the range is synced. Thread-safe; the task picks it up on its next iteration.
+        /// </summary>
+        public void SetRangeEnabled(long baseIdBegin, bool enabled)
+        {
+            lock (_lock)
+            {
+                if (enabled)
+                {
+                    _disabledBegins.Remove(baseIdBegin);
+                }
+                else if (_disabledBegins.Add(baseIdBegin))
+                {
+                    Log.Information("Sync skipping records from " + baseIdBegin + " (switched off in the Sync Table)");
+                }
+
+                foreach (var range in _ranges)
+                {
+                    if ((range.Status == RangeStatus.NotSync || range.Status == RangeStatus.Syncing) &&
+                        range.Range.BaseIdBegin == baseIdBegin)
+                    {
+                        range.SyncEnabled = enabled;
+                    }
+                }
+
+                if (!enabled && _syncingIndex >= 0 &&
+                    _syncingIndex < _ranges.Count &&
+                    _ranges[_syncingIndex].Range.BaseIdBegin == baseIdBegin)
+                {
+                    // Stop copying this range now (already-copied rows stay) and move to the next enabled one.
+                    _ranges[_syncingIndex].Status = RangeStatus.NotSync;
+                    SelectNextRange();
+                }
+                else if (enabled && _syncingIndex < 0)
+                {
+                    // Nothing is being copied; a re-enabled range can be picked up right away.
+                    SelectNextRange();
+                }
+            }
+            Wake();
+        }
 
         public List<SyncRange> GetRangesSnapshot()
         {
@@ -226,6 +270,7 @@ namespace DataSync.Core.Replication
                 var current = _ranges[_syncingIndex];
                 if (windowBegin <= current.Range.BaseIdBegin)
                 {
+                    _disabledBegins.Remove(current.Range.BaseIdBegin);
                     current.Status = RangeStatus.Synced;
                     current.Range.BaseIdEnd = current.StartSyncPoint;
                     current.StartSyncPoint = -1;
@@ -264,6 +309,18 @@ namespace DataSync.Core.Replication
 
             lock (_lock)
             {
+                // Ranges are rebuilt here, so carry over the ranges the user switched off (same BaseIdBegin).
+                // The refresh runs after Resync too, so the task is never inside a range here and BaseIdBegin
+                // is still the range's identity. (While a range is being copied BaseIdEnd moves down instead.)
+                foreach (var range in ranges)
+                {
+                    if ((range.Status == RangeStatus.NotSync || range.Status == RangeStatus.Syncing) &&
+                        _disabledBegins.Contains(range.Range.BaseIdBegin))
+                    {
+                        range.SyncEnabled = false;
+                    }
+                }
+
                 _ranges = ranges;
                 SelectNextRange();
             }
