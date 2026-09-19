@@ -133,37 +133,37 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Binding="{Binding BaseIdBegin, StringFormat={}{0:N0}, ConverterCulture=en-US}" Width="*" ElementStyle="{StaticResource CellText}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="Begin" ToolTip="First record number in this range" />
+                                <TextBlock Text="Begin" ToolTip="First record" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTextColumn Binding="{Binding BaseIdEnd}" Width="*" ElementStyle="{StaticResource CellText}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="End" ToolTip="Last record number in this range; sync copies backwards from here" />
+                                <TextBlock Text="End" ToolTip="Last record" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTextColumn Binding="{Binding CurrentRecord}" Width="*" ElementStyle="{StaticResource CellText}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="Current" ToolTip="Newest record copied so far; real-time row shows the newest record saved locally" />
+                                <TextBlock Text="Current" ToolTip="Current record" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTextColumn Binding="{Binding Count}" Width="*" ElementStyle="{StaticResource CellText}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="Count" ToolTip="Records in this range; real-time row shows Current minus Begin" />
+                                <TextBlock Text="Count" ToolTip="Number of records" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTextColumn Binding="{Binding Share}" Width="*" ElementStyle="{StaticResource CellText}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="Total (%)" ToolTip="This row's share of all records shown" />
+                                <TextBlock Text="Total" ToolTip="Total records" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTextColumn Binding="{Binding Percent}" Width="*" ElementStyle="{StaticResource CellText}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="Progress" ToolTip="Share of this range copied so far" />
+                                <TextBlock Text="Progress" ToolTip="Sync Progress" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTextColumn Binding="{Binding Status}" Width="*" ElementStyle="{StaticResource CellText}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="Status" ToolTip="Range state: Real-time, Syncing, Queued, Synced or Skipped" />
+                                <TextBlock Text="Status" ToolTip="Range state" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTemplateColumn Width="*" IsReadOnly="False">
