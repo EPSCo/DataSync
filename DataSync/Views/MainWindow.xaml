@@ -147,42 +147,42 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn x:Name="BeginColumn" Binding="{Binding BaseIdBegin, StringFormat={}{0:N0}, ConverterCulture=en-US}" Width="*" ElementStyle="{StaticResource CellTextRight}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="Begin" ToolTip="First record" />
+                                <TextBlock Text="Begin" ToolTip="First record" Style="{StaticResource ColumnHeaderText}" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTextColumn x:Name="EndColumn" Binding="{Binding BaseIdEnd}" Width="*" ElementStyle="{StaticResource CellTextRight}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="End" ToolTip="Last record" />
+                                <TextBlock Text="End" ToolTip="Last record" Style="{StaticResource ColumnHeaderText}" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTextColumn x:Name="CurrentColumn" Binding="{Binding CurrentRecord}" Width="*" ElementStyle="{StaticResource CellTextRight}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="Current" ToolTip="Current record" />
+                                <TextBlock Text="Current" ToolTip="Current record" Style="{StaticResource ColumnHeaderText}" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTextColumn x:Name="CountColumn" Binding="{Binding Count}" Width="*" ElementStyle="{StaticResource CellTextRight}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="Count" ToolTip="Number of records" />
+                                <TextBlock Text="Count" ToolTip="Number of records" Style="{StaticResource ColumnHeaderText}" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTextColumn x:Name="TotalColumn" Binding="{Binding Share}" Width="*" ElementStyle="{StaticResource CellTextRight}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="Total" ToolTip="Total records" />
+                                <TextBlock Text="Total" ToolTip="Total records" Style="{StaticResource ColumnHeaderText}" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTextColumn x:Name="ProgressColumn" Binding="{Binding Percent}" Width="*" ElementStyle="{StaticResource CellText}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="Progress" ToolTip="Sync Progress" />
+                                <TextBlock Text="Progress" ToolTip="Sync Progress" Style="{StaticResource ColumnHeaderText}" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTextColumn x:Name="StatusColumn" Binding="{Binding Status}" Width="*" ElementStyle="{StaticResource CellTextCenter}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
-                                <TextBlock Text="Status" ToolTip="Range state" />
+                                <TextBlock Text="Status" ToolTip="Range state" Style="{StaticResource ColumnHeaderText}" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
                         <DataGridTemplateColumn x:Name="SyncColumn" Width="*" IsReadOnly="False" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTemplateColumn.Header>
-                                <TextBlock Text="Sync" ToolTip="Switch a range off to skip it, on to sync it" />
+                                <TextBlock Text="Sync" ToolTip="Switch a range off to skip it, on to sync it" Style="{StaticResource ColumnHeaderText}" />
                             </DataGridTemplateColumn.Header>
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
