@@ -57,10 +57,105 @@ namespace DataSync.Core.Replication
 
         /// <param name="judgeMeasurements">Measurements a tried step, or a drop at the held size, is judged over.</param>
         public SyncBatchSize(int min, int max, int judgeMeasurements = DefaultJudgeMeasurements)
+            : this(min, max, judgeMeasurements, 0, DefaultSpeedWindowSeconds)
+        {
+        }
+
+        /// <summary>Speed window used when sizing by a multiplier of the average speed.</summary>
+        public const double DefaultSpeedWindowSeconds = 10;
+
+        private readonly double _windowSeconds;
+        private readonly object _rateGate = new object();
+        private readonly Queue<long> _windowCovered = new Queue<long>();
+        private readonly Queue<double> _windowReadSeconds = new Queue<double>();
+        private long _windowCoveredTotal;
+        private double _windowReadSecondsTotal;
+        private double _multiplier;
+
+        /// <summary>
+        /// Sizes reads as <paramref name="multiplier"/> × the average copy speed (rows per second, moving average over
+        /// <paramref name="windowSeconds"/> of read time), rounded to the nearest step; 0 sizes by probing steps instead.
+        /// </summary>
+        public SyncBatchSize(int min, int max, int judgeMeasurements, double multiplier, double windowSeconds)
             : base(min, max)
         {
             _steps = BuildSteps(Min, Max);
             _judgeMeasurements = Math.Max(1, judgeMeasurements);
+            _multiplier = Math.Max(0, multiplier);
+            _windowSeconds = Math.Max(1, windowSeconds);
+        }
+
+        /// <summary>Changes the multiplier the read size follows; 0 returns to step probing.</summary>
+        public void SetMultiplier(double multiplier)
+        {
+            lock (_rateGate)
+            {
+                _multiplier = Math.Max(0, multiplier);
+            }
+        }
+
+        /// <summary>Average copy speed over the window, in rows per second; 0 before the first read.</summary>
+        public double AverageSpeed
+        {
+            get
+            {
+                lock (_rateGate)
+                {
+                    return _windowReadSecondsTotal > 0 ? _windowCoveredTotal / _windowReadSecondsTotal : 0;
+                }
+            }
+        }
+
+        private bool MultiplierMode
+        {
+            get { lock (_rateGate) { return _multiplier > 0; } }
+        }
+
+        /// <summary>
+        /// Sizes the next read as the multiplier × the average speed over the window, rounded to the nearest step.
+        /// </summary>
+        private void OnMultiplierRead(long covered, double seconds)
+        {
+            lock (_rateGate)
+            {
+                _windowCovered.Enqueue(covered);
+                _windowReadSeconds.Enqueue(seconds);
+                _windowCoveredTotal += covered;
+                _windowReadSecondsTotal += seconds;
+
+                // Keep roughly the last _windowSeconds of read time in the average.
+                while (_windowCovered.Count > 1 && _windowReadSecondsTotal - _windowReadSeconds.Peek() >= _windowSeconds)
+                {
+                    _windowCoveredTotal -= _windowCovered.Dequeue();
+                    _windowReadSecondsTotal -= _windowReadSeconds.Dequeue();
+                }
+
+                var speed = _windowReadSecondsTotal > 0 ? _windowCoveredTotal / _windowReadSecondsTotal : 0;
+                var target = NearestStep(_multiplier * speed);
+                if (target != Current)
+                {
+                    SetCurrent(target);
+                }
+            }
+        }
+
+        /// <summary>The step closest to <paramref name="value"/> (ties and below go to the smaller step).</summary>
+        private int NearestStep(double value)
+        {
+            if (value <= Min)
+            {
+                return Min;
+            }
+
+            var index = IndexAtOrBelow((int)Math.Min(int.MaxValue, value));
+            var below = _steps[index];
+            if (index + 1 >= _steps.Length)
+            {
+                return below;
+            }
+
+            var above = _steps[index + 1];
+            return above - value < value - below ? above : below;
         }
 
         /// <summary>BaseIDs per second at the held size; 0 before the first measurement.</summary>
@@ -95,6 +190,12 @@ namespace DataSync.Core.Replication
             if (!IsAdaptive || covered < requested)
             {
                 // A range's last, shorter window: its fixed overhead would understate the rate.
+                return;
+            }
+
+            if (MultiplierMode)
+            {
+                OnMultiplierRead(covered, Math.Max(0.001, elapsed.TotalSeconds));
                 return;
             }
 

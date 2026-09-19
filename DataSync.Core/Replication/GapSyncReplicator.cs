@@ -60,8 +60,12 @@ namespace DataSync.Core.Replication
         {
         }
 
-        private GapSyncReplicator(IProcessDataStore remote, IProcessDataStore local, Func<long> getBoundary,
-                                  ReplicationSettings settings, Action<string> report, Func<bool> shouldYield, SyncBatchSize batch)
+        /// <param name="getBoundary">Returns the real-time position; BaseIDs from there up are not synced.</param>
+        /// <param name="shouldYield">While it returns true the task does not read, leaving the link to the real-time task.</param>
+        /// <param name="batch">The batch size to use, so the caller can keep a reference to it.</param>
+        public GapSyncReplicator(IProcessDataStore remote, IProcessDataStore local, Func<long> getBoundary,
+                                 ReplicationSettings settings, Action<string> report, Func<bool> shouldYield,
+                                 SyncBatchSize batch)
             : base("Sync", settings, batch, report)
         {
             _remote = remote;

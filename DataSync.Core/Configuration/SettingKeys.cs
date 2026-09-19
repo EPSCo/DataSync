@@ -30,6 +30,9 @@ namespace DataSync.Core.Configuration
         public const string RealTimeBatchMultiplier = "RealTimeBatchMultiplier";
         public const string SyncBatchMeasurements = "SyncBatchMeasurements";
         public const string RateWindow = "RateWindow";
+        public const string SyncBatchMultiplier = "SyncBatchMultiplier";
+        public const string SyncMultiplierTest = "SyncMultiplierTest";
+        public const string SyncMultiplierTestMinutes = "SyncMultiplierTestMinutes";
         public const string CommandTimeout = "CommandTimeout";
         public const string PrioritizeLatestData = "PrioritizeLatestData";
         public const string LogLevel = "LogLevel";

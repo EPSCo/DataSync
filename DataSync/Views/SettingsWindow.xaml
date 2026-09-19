@@ -112,6 +112,9 @@
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
                             <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="Auto" />
                         </Grid.RowDefinitions>
 
                         <TextBlock Grid.Row="0" Text="Adaptive batch size" Style="{StaticResource FieldLabel}"
@@ -136,6 +139,21 @@
                         <TextBlock Grid.Row="5" Text="Rate window (s)" Style="{StaticResource FieldLabel}"
                                    ToolTip="The rows/second shown is the rows copied over this many seconds, divided by that time. Higher: steadier rate, slower to follow changes" />
                         <TextBox Grid.Row="5" Grid.Column="1" Text="{Binding RateWindow, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="6" Text="Sync batch multiplier" Style="{StaticResource FieldLabel}"
+                                   ToolTip="Sync reads are sized as this multiplier × the average sync speed (rows/s over the rate window), rounded to the nearest step size. 0: size the reads by trying neighbouring steps instead" />
+                        <TextBox Grid.Row="6" Grid.Column="1" IsEnabled="{Binding IsChecked, ElementName=AdaptiveCheckBox}"
+                                 Text="{Binding SyncBatchMultiplier, UpdateSourceTrigger=PropertyChanged}" />
+
+                        <TextBlock Grid.Row="7" Text="Multiplier test" Style="{StaticResource FieldLabel}"
+                                   ToolTip="Try the multipliers 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 8 and 10 in turn, each for the minutes below, logging the rows received per multiplier to find the best one. Requires adaptive batch size" />
+                        <CheckBox Grid.Row="7" Grid.Column="1" IsEnabled="{Binding IsChecked, ElementName=AdaptiveCheckBox}"
+                                  IsChecked="{Binding SyncMultiplierTest}" />
+
+                        <TextBlock Grid.Row="8" Text="Test minutes each" Style="{StaticResource FieldLabel}"
+                                   ToolTip="Minutes each multiplier is tried in the multiplier test; 20 minutes each is about 3.7 hours for all eleven" />
+                        <TextBox Grid.Row="8" Grid.Column="1" IsEnabled="{Binding IsChecked, ElementName=AdaptiveCheckBox}"
+                                 Text="{Binding SyncMultiplierTestMinutes, UpdateSourceTrigger=PropertyChanged}" />
 
                         <TextBlock Grid.Row="4" Text="Command timeout (s)" Style="{StaticResource FieldLabel}"
                                    ToolTip="Seconds before a database read or save is abandoned as timed out" />

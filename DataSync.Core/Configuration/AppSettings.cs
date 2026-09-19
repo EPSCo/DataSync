@@ -1,4 +1,6 @@
+using System;
 using System.Configuration;
+using System.Globalization;
 
 namespace DataSync.Core.Configuration
 {
@@ -26,6 +28,12 @@ namespace DataSync.Core.Configuration
         public static bool GetBool(string key, bool defaultValue)
         {
             return bool.TryParse(ConfigurationManager.AppSettings[key], out var value) ? value : defaultValue;
+        }
+
+        public static double GetDouble(string key, double defaultValue)
+        {
+            return double.TryParse(ConfigurationManager.AppSettings[key], NumberStyles.Float,
+                                   CultureInfo.InvariantCulture, out var value) ? value : defaultValue;
         }
     }
 }

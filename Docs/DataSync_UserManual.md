@@ -120,6 +120,8 @@ The files are bound to the machine's CPU. If they were created for another machi
 | `PrioritizeLatestData` | `true` (default): newest records first, skipped records back-filled newest first; `false`: catch up oldest-first, as DDRREP did |
 | `SyncUpdateInterval` | Seconds to pause between sync batches |
 | `RateWindow` | Seconds of one-second samples averaged for the copy rate (rows/s) shown next to the batch sizes (default 10) |
+| `SyncBatchMultiplier` | Sync reads sized as this multiplier × the average sync speed (rows/s over `RateWindow`), rounded to the nearest step size; 0 sizes the reads by trying neighbouring steps instead (default) |
+| `SyncMultiplierTest` / `SyncMultiplierTestMinutes` | `true`: try the multipliers 0.5, 0.75, 1, 1.5, 2, 3, 4, 5, 6, 8 and 10 in turn, each for the given minutes (default 20), logging the rows received per multiplier to find the best one |
 | `MaxRowsPerSecond` | Copy rate limit per task (0 = unlimited) |
 | `GapCheckInterval` | Minutes between checks for new gaps |
 | `TimeoutCounterLimit` | Consecutive failures before restart (skipped while a database is unreachable) |

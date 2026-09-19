@@ -16,6 +16,8 @@ namespace DataSync.Core.Replication
         private readonly ReplicationSettings _settings;
         private readonly RealTimeReplicator _realTime;
         private readonly GapSyncReplicator _sync;
+        private readonly SyncBatchSize _syncBatch;
+        private readonly SyncMultiplierExperiment _multiplierTest;
 
         public ReplicationEngine(IProcessDataStore remote, IProcessDataStore local, ReplicationSettings settings)
         {
@@ -29,8 +31,18 @@ namespace DataSync.Core.Replication
             {
                 syncShouldYield = () => _realTime.IsBehind || _realTime.FailureCount > 0;
             }
-            _sync = new GapSyncReplicator(remote, local, () => _realTime.NextBaseId, settings, Report, syncShouldYield);
+            _syncBatch = settings.CreateSyncBatchSize();
+            _sync = new GapSyncReplicator(remote, local, () => _realTime.NextBaseId, settings, Report, syncShouldYield,
+                                          _syncBatch);
             _realTime.RangeSkipped += (s, range) => _sync.AddGap(range);
+
+            if (settings.SyncMultiplierTest && settings.AdaptiveBatchSize)
+            {
+                _multiplierTest = new SyncMultiplierExperiment(_syncBatch, () => _sync.RowsCopied,
+                                                               SyncMultiplierExperiment.DefaultMultipliers,
+                                                               TimeSpan.FromMinutes(settings.SyncMultiplierTestMinutes),
+                                                               Report);
+            }
         }
 
         /// <summary>
@@ -48,6 +60,7 @@ namespace DataSync.Core.Replication
             _sync.RequestRefresh();
             _realTime.Start();
             _sync.Start();
+            _multiplierTest?.Start();
         }
 
         public void PauseSync()
@@ -83,6 +96,7 @@ namespace DataSync.Core.Replication
         {
             Log.Information("Replication stopping");
             var stopwatch = Stopwatch.StartNew();
+            _multiplierTest?.Stop();
             _realTime.RequestStop();
             _sync.RequestStop();
             if (WaitForStop(_realTime.Completion, _sync.Completion))

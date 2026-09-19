@@ -39,6 +39,14 @@ namespace DataSync.Core.Configuration
         /// <summary>One-second samples averaged for the displayed copy rate (rows/s).</summary>
         public string RateWindow { get; set; }
 
+        /// <summary>Multiplier applied to the average sync speed to size sync reads; 0 sizes by trying steps instead.</summary>
+        public string SyncBatchMultiplier { get; set; }
+
+        public bool SyncMultiplierTest { get; set; }
+
+        /// <summary>Minutes each multiplier is tried in the batch multiplier test.</summary>
+        public string SyncMultiplierTestMinutes { get; set; }
+
         /// <summary>Minutes.</summary>
         public string GapCheckInterval { get; set; }
         public string TimeoutCounterLimit { get; set; }
@@ -70,6 +78,9 @@ namespace DataSync.Core.Configuration
                 SyncBatchMeasurements  = replication.SyncBatchMeasurements.ToString(Invariant),
                 CommandTimeout         = ((long)replication.CommandTimeout.TotalSeconds).ToString(Invariant),
                 RateWindow             = AppSettings.GetInt(SettingKeys.RateWindow, 10).ToString(Invariant),
+                SyncBatchMultiplier    = replication.SyncBatchMultiplier.ToString("0.##", Invariant),
+                SyncMultiplierTest     = replication.SyncMultiplierTest,
+                SyncMultiplierTestMinutes = replication.SyncMultiplierTestMinutes.ToString(Invariant),
                 GapCheckInterval       = ((long)replication.GapCheckInterval.TotalMinutes).ToString(Invariant),
                 TimeoutCounterLimit    = replication.FailureLimit.ToString(Invariant),
                 LogPathDir             = AppSettings.GetString(SettingKeys.LogPathDir, "logs"),
@@ -98,6 +109,8 @@ namespace DataSync.Core.Configuration
                    ?? CheckInt(SyncBatchMeasurements, 1, "Sync batch measurements")
                    ?? CheckInt(CommandTimeout, 5, "Command timeout")
                    ?? CheckInt(RateWindow, 1, "Rate window")
+                   ?? CheckDouble(SyncBatchMultiplier, 0, "Sync batch multiplier")
+                   ?? CheckInt(SyncMultiplierTestMinutes, 1, "Multiplier test minutes")
                    ?? CheckInt(GapCheckInterval, 1, "Gap check interval")
                    ?? CheckInt(TimeoutCounterLimit, 0, "Failures before restart")
                    ?? CheckLogDirectory()
@@ -124,6 +137,9 @@ namespace DataSync.Core.Configuration
                 [SettingKeys.SyncBatchMeasurements]  = NormalizeInt(SyncBatchMeasurements),
                 [SettingKeys.CommandTimeout]         = NormalizeInt(CommandTimeout),
                 [SettingKeys.RateWindow]             = NormalizeInt(RateWindow),
+                [SettingKeys.SyncBatchMultiplier]    = NormalizeDouble(SyncBatchMultiplier),
+                [SettingKeys.SyncMultiplierTest]     = SyncMultiplierTest ? "true" : "false",
+                [SettingKeys.SyncMultiplierTestMinutes] = NormalizeInt(SyncMultiplierTestMinutes),
                 [SettingKeys.GapCheckInterval]       = NormalizeInt(GapCheckInterval),
                 [SettingKeys.TimeoutCounterLimit]    = NormalizeInt(TimeoutCounterLimit),
                 [SettingKeys.LogPathDir]             = LogPathDir.Trim(),
@@ -182,9 +198,21 @@ namespace DataSync.Core.Configuration
             }
         }
 
+        private static string CheckDouble(string value, double minimum, string name)
+        {
+            return double.TryParse(value?.Trim(), NumberStyles.Float, Invariant, out var number) && number >= minimum
+                ? null
+                : name + " must be a number of at least " + minimum.ToString(Invariant) + ".";
+        }
+
         private static string NormalizeInt(string value)
         {
             return int.Parse(value.Trim(), NumberStyles.Integer, Invariant).ToString(Invariant);
+        }
+
+        private static string NormalizeDouble(string value)
+        {
+            return double.Parse(value.Trim(), NumberStyles.Float, Invariant).ToString("0.##", Invariant);
         }
     }
 }

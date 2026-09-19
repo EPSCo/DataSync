@@ -37,6 +37,21 @@ namespace DataSync.Core.Replication
         /// </summary>
         public int SyncBatchMeasurements { get; set; } = SyncBatchSize.DefaultJudgeMeasurements;
 
+        /// <summary>
+        /// Multiplier applied to the average sync speed (rows/s over a moving window) to size sync reads, rounded to
+        /// the nearest step. 0 sizes the reads by trying neighbouring steps instead (the default behaviour).
+        /// </summary>
+        public double SyncBatchMultiplier { get; set; }
+
+        /// <summary>When true, the sync batch-size multipliers are tried in turn and the rows received are logged.</summary>
+        public bool SyncMultiplierTest { get; set; }
+
+        /// <summary>Minutes each multiplier is tried in the batch multiplier test.</summary>
+        public int SyncMultiplierTestMinutes { get; set; } = 20;
+
+        /// <summary>Seconds of read time the average sync speed is averaged over (the RateWindow setting).</summary>
+        public double SyncSpeedWindowSeconds => Math.Max(1, AppSettings.GetInt(SettingKeys.RateWindow, 10));
+
         /// <summary>SQL command timeout for replication reads and writes.</summary>
         public TimeSpan CommandTimeout { get; set; } = TimeSpan.FromSeconds(60);
 
@@ -74,6 +89,9 @@ namespace DataSync.Core.Replication
                 MinRowLimit            = Math.Max(1, AppSettings.GetInt(SettingKeys.MinRowLimit, 5)),
                 RealTimeBatchMultiplier = Math.Max(1, AppSettings.GetInt(SettingKeys.RealTimeBatchMultiplier, 5)),
                 SyncBatchMeasurements  = Math.Max(1, AppSettings.GetInt(SettingKeys.SyncBatchMeasurements, SyncBatchSize.DefaultJudgeMeasurements)),
+                SyncBatchMultiplier    = Math.Max(0, AppSettings.GetDouble(SettingKeys.SyncBatchMultiplier, 0)),
+                SyncMultiplierTest     = AppSettings.GetBool(SettingKeys.SyncMultiplierTest, false),
+                SyncMultiplierTestMinutes = Math.Max(1, AppSettings.GetInt(SettingKeys.SyncMultiplierTestMinutes, 20)),
                 CommandTimeout         = TimeSpan.FromSeconds(Math.Max(5, AppSettings.GetInt(SettingKeys.CommandTimeout, 60))),
                 PrioritizeLatestData   = AppSettings.GetBool(SettingKeys.PrioritizeLatestData, true)
             };
@@ -93,6 +111,8 @@ namespace DataSync.Core.Replication
                    ", MinRowLimit=" + MinRowLimit +
                    ", RealTimeBatchMultiplier=" + RealTimeBatchMultiplier +
                    ", SyncBatchMeasurements=" + SyncBatchMeasurements +
+                   ", SyncBatchMultiplier=" + SyncBatchMultiplier.ToString(CultureInfo.InvariantCulture) +
+                   ", SyncMultiplierTest=" + SyncMultiplierTest +
                    ", CommandTimeout=" + Seconds(CommandTimeout) +
                    ", MaxRowsPerSecond=" + MaxRowsPerSecond +
                    ", GapCheckInterval=" + Seconds(GapCheckInterval) +
@@ -114,7 +134,8 @@ namespace DataSync.Core.Replication
         /// <summary>The sync read size: adaptive from MinRowLimit, or fixed at SyncRowLimit.</summary>
         public SyncBatchSize CreateSyncBatchSize()
         {
-            return new SyncBatchSize(AdaptiveBatchSize ? MinRowLimit : SyncRowLimit, SyncRowLimit, SyncBatchMeasurements);
+            return new SyncBatchSize(AdaptiveBatchSize ? MinRowLimit : SyncRowLimit, SyncRowLimit, SyncBatchMeasurements,
+                                     SyncBatchMultiplier, SyncSpeedWindowSeconds);
         }
     }
 }

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Threading;
 using DataSync.Core.Replication;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 
@@ -370,6 +372,104 @@ namespace DataSync.Tests
 
             settings.SyncRowLimit = 3;
             Assert.AreEqual(3, settings.CreateSyncBatchSize().Current);
+        }
+
+        // Multiplier mode: the read size follows multiplier × average speed, rounded to the nearest step.
+
+        private static void FeedFixed(SyncBatchSize batch, int rows, double seconds, int reads)
+        {
+            for (var i = 0; i < reads; i++)
+            {
+                batch.OnRead(rows, rows, Seconds(seconds));
+            }
+        }
+
+        [TestMethod]
+        public void Multiplier_SizesToTheNearestStep()
+        {
+            // Speed 100 rows/s (100 rows per 1 s read), multiplier 2 → 200, an exact step.
+            var batch = new SyncBatchSize(5, 1000, 3, 2, 10);
+            FeedFixed(batch, 100, 1, 3);
+            Assert.AreEqual(200, batch.Current);
+        }
+
+        [TestMethod]
+        public void Multiplier_RoundsToTheNearestStep()
+        {
+            // Speed 10 rows/s, multiplier 1.2 → 12, which is nearer 10 than 20.
+            var batch = new SyncBatchSize(5, 1000, 3, 1.2, 10);
+            FeedFixed(batch, 10, 1, 3);
+            Assert.AreEqual(10, batch.Current);
+        }
+
+        [TestMethod]
+        public void Multiplier_FollowsSpeedChanges()
+        {
+            var batch = new SyncBatchSize(5, 100000, 3, 1, 10);
+            FeedFixed(batch, 100, 1, 5); // speed 100 → step 100
+            Assert.AreEqual(100, batch.Current);
+
+            FeedFixed(batch, 500, 1, 15); // window of 10 s of read time fills with the faster reads → speed 500
+            Assert.AreEqual(500, batch.Current);
+        }
+
+        [TestMethod]
+        public void Multiplier_StaysWithinMax()
+        {
+            var batch = new SyncBatchSize(5, 300, 3, 10, 10);
+            FeedFixed(batch, 100, 0.1, 5); // speed 1000 → 10000, clamped to Max 300
+            Assert.AreEqual(300, batch.Current);
+        }
+
+        [TestMethod]
+        public void Multiplier_AFailureStillShrinksTheSize()
+        {
+            var batch = new SyncBatchSize(5, 1000, 3, 2, 10);
+            FeedFixed(batch, 100, 1, 3);
+            Assert.AreEqual(200, batch.Current);
+
+            batch.OnReadFailed(new TimeoutException());
+            Assert.IsTrue(batch.Current < 200);
+        }
+
+        [TestMethod]
+        public void Multiplier_ZeroKeepsTheStepProbingBehaviour()
+        {
+            var batch = new SyncBatchSize(5, 1000, 3, 0, 10);
+            var sizes = Feed(batch, FastLink, 60);
+            Assert.IsTrue(Changes(sizes) > 0, "expected step probing to change the size");
+        }
+
+        [TestMethod]
+        public void MultiplierTest_WritesResultsToCsv()
+        {
+            var directory = Path.Combine(Path.GetTempPath(), "DataSyncTests_" + Guid.NewGuid().ToString("N"));
+            try
+            {
+                var batch = new SyncBatchSize(5, 1000, 3, 0, 10);
+                long rows = 0;
+                var experiment = new SyncMultiplierExperiment(batch, () => Interlocked.Increment(ref rows) * 100,
+                                                              new double[] { 1, 2 }, TimeSpan.FromSeconds(1),
+                                                              null, directory);
+                experiment.Start();
+                Thread.Sleep(2600); // two 1-second phases
+                experiment.Stop();
+
+                var file = new DirectoryInfo(directory).GetFiles("BatchMultiplierTest_*.csv");
+                Assert.AreEqual(1, file.Length);
+                var lines = File.ReadAllLines(file[0].FullName);
+                Assert.AreEqual(3, lines.Length); // header + one line per multiplier
+                StringAssert.StartsWith(lines[0], "Start (UTC),Multiplier,Minutes,Rows,RowsPerSecond");
+                StringAssert.Matches(lines[1], new System.Text.RegularExpressions.Regex(@"^[0-9-]+ [0-9:]+,1,"));
+                StringAssert.Matches(lines[2], new System.Text.RegularExpressions.Regex(@"^[0-9-]+ [0-9:]+,2,"));
+            }
+            finally
+            {
+                if (Directory.Exists(directory))
+                {
+                    Directory.Delete(directory, true);
+                }
+            }
         }
     }
 }
