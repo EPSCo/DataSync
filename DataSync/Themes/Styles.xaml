@@ -92,7 +92,29 @@
         <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
     </Style>
 
-    <!-- ========== Containers ========== -->
+    <Style x:Key="CellTextCenter" TargetType="TextBlock" BasedOn="{StaticResource CellText}">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="TextAlignment" Value="Center" />
+    </Style>
+
+    <!--
+        Right-aligned numbers (Begin, End, Current, Count, Total). Cells without a value show an
+        em dash ("—", see MainViewModel) which is centered instead via the trigger below.
+    -->
+    <Style x:Key="CellTextRight" TargetType="TextBlock" BasedOn="{StaticResource CellText}">
+        <Setter Property="HorizontalAlignment" Value="Stretch" />
+        <Setter Property="TextAlignment" Value="Right" />
+        <Style.Triggers>
+            <Trigger Property="Text" Value="—">
+                <Setter Property="TextAlignment" Value="Center" />
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
+    <Style x:Key="ColumnHeaderCenter" TargetType="DataGridColumnHeader" BasedOn="{StaticResource {x:Type DataGridColumnHeader}}">
+        <Setter Property="HorizontalContentAlignment" Value="Center" />
+    </Style>
+
     <Style x:Key="Card" TargetType="Border">
         <Setter Property="Background" Value="{StaticResource SurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{StaticResource LineBrush}" />

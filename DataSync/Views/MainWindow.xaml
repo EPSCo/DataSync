@@ -113,7 +113,21 @@
         <!-- Ranges and messages -->
         <TabControl Grid.Row="2" Margin="10" Padding="1,0,1,6">
             <TabItem Header="Sync table">
-                <DataGrid ItemsSource="{Binding Ranges}" BorderThickness="0">
+                <DataGrid x:Name="SyncGrid" ItemsSource="{Binding Ranges}" BorderThickness="0">
+                    <DataGrid.ContextMenu>
+                        <ContextMenu>
+                            <MenuItem Header="Columns" IsEnabled="False" FontWeight="SemiBold" />
+                            <Separator />
+                            <MenuItem x:Name="BeginColumnMenuItem" Header="Begin" IsCheckable="True" IsChecked="True" Tag="BeginColumn" Checked="SyncColumnMenuItem_Toggled" Unchecked="SyncColumnMenuItem_Toggled" />
+                            <MenuItem x:Name="EndColumnMenuItem" Header="End" IsCheckable="True" IsChecked="True" Tag="EndColumn" Checked="SyncColumnMenuItem_Toggled" Unchecked="SyncColumnMenuItem_Toggled" />
+                            <MenuItem x:Name="CurrentColumnMenuItem" Header="Current" IsCheckable="True" IsChecked="True" Tag="CurrentColumn" Checked="SyncColumnMenuItem_Toggled" Unchecked="SyncColumnMenuItem_Toggled" />
+                            <MenuItem x:Name="CountColumnMenuItem" Header="Count" IsCheckable="True" IsChecked="True" Tag="CountColumn" Checked="SyncColumnMenuItem_Toggled" Unchecked="SyncColumnMenuItem_Toggled" />
+                            <MenuItem x:Name="TotalColumnMenuItem" Header="Total" IsCheckable="True" IsChecked="True" Tag="TotalColumn" Checked="SyncColumnMenuItem_Toggled" Unchecked="SyncColumnMenuItem_Toggled" />
+                            <MenuItem x:Name="ProgressColumnMenuItem" Header="Progress" IsCheckable="True" IsChecked="True" Tag="ProgressColumn" Checked="SyncColumnMenuItem_Toggled" Unchecked="SyncColumnMenuItem_Toggled" />
+                            <MenuItem x:Name="StatusColumnMenuItem" Header="Status" IsCheckable="True" IsChecked="True" Tag="StatusColumn" Checked="SyncColumnMenuItem_Toggled" Unchecked="SyncColumnMenuItem_Toggled" />
+                            <MenuItem x:Name="SyncColumnMenuItem" Header="Sync" IsCheckable="True" IsChecked="True" Tag="SyncColumn" Checked="SyncColumnMenuItem_Toggled" Unchecked="SyncColumnMenuItem_Toggled" />
+                        </ContextMenu>
+                    </DataGrid.ContextMenu>
                     <DataGrid.RowStyle>
                         <Style TargetType="DataGridRow">
                             <Style.Triggers>
@@ -131,42 +145,42 @@
                         </Style>
                     </DataGrid.RowStyle>
                     <DataGrid.Columns>
-                        <DataGridTextColumn Binding="{Binding BaseIdBegin, StringFormat={}{0:N0}, ConverterCulture=en-US}" Width="*" ElementStyle="{StaticResource CellText}">
+                        <DataGridTextColumn x:Name="BeginColumn" Binding="{Binding BaseIdBegin, StringFormat={}{0:N0}, ConverterCulture=en-US}" Width="*" ElementStyle="{StaticResource CellTextRight}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
                                 <TextBlock Text="Begin" ToolTip="First record" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Binding="{Binding BaseIdEnd}" Width="*" ElementStyle="{StaticResource CellText}">
+                        <DataGridTextColumn x:Name="EndColumn" Binding="{Binding BaseIdEnd}" Width="*" ElementStyle="{StaticResource CellTextRight}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
                                 <TextBlock Text="End" ToolTip="Last record" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Binding="{Binding CurrentRecord}" Width="*" ElementStyle="{StaticResource CellText}">
+                        <DataGridTextColumn x:Name="CurrentColumn" Binding="{Binding CurrentRecord}" Width="*" ElementStyle="{StaticResource CellTextRight}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
                                 <TextBlock Text="Current" ToolTip="Current record" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Binding="{Binding Count}" Width="*" ElementStyle="{StaticResource CellText}">
+                        <DataGridTextColumn x:Name="CountColumn" Binding="{Binding Count}" Width="*" ElementStyle="{StaticResource CellTextRight}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
                                 <TextBlock Text="Count" ToolTip="Number of records" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Binding="{Binding Share}" Width="*" ElementStyle="{StaticResource CellText}">
+                        <DataGridTextColumn x:Name="TotalColumn" Binding="{Binding Share}" Width="*" ElementStyle="{StaticResource CellTextRight}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
                                 <TextBlock Text="Total" ToolTip="Total records" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Binding="{Binding Percent}" Width="*" ElementStyle="{StaticResource CellText}">
+                        <DataGridTextColumn x:Name="ProgressColumn" Binding="{Binding Percent}" Width="*" ElementStyle="{StaticResource CellText}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
                                 <TextBlock Text="Progress" ToolTip="Sync Progress" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Binding="{Binding Status}" Width="*" ElementStyle="{StaticResource CellText}">
+                        <DataGridTextColumn x:Name="StatusColumn" Binding="{Binding Status}" Width="*" ElementStyle="{StaticResource CellTextCenter}" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTextColumn.Header>
                                 <TextBlock Text="Status" ToolTip="Range state" />
                             </DataGridTextColumn.Header>
                         </DataGridTextColumn>
-                        <DataGridTemplateColumn Width="*" IsReadOnly="False">
+                        <DataGridTemplateColumn x:Name="SyncColumn" Width="*" IsReadOnly="False" HeaderStyle="{StaticResource ColumnHeaderCenter}">
                             <DataGridTemplateColumn.Header>
                                 <TextBlock Text="Sync" ToolTip="Switch a range off to skip it, on to sync it" />
                             </DataGridTemplateColumn.Header>
