@@ -362,12 +362,15 @@ namespace DataSync.ViewModels
             var ranges = status.Ranges.OrderByDescending(r => r.Range.BaseIdBegin).ToList();
             _dotFrame = (_dotFrame + 1) % 3;
 
-            // Count is the full size of each range (stable while it syncs); Share is its part of all rows shown.
+            // Count is the full size of each range (stable while it syncs), except Real-time which is
+            // Current - Begin (records copied by the real-time task since this boundary); Share is its part of all rows shown.
             var sizes = new long[ranges.Count];
             long total = 0;
             for (var i = 0; i < ranges.Count; i++)
             {
-                sizes[i] = RangeSize(ranges[i]);
+                sizes[i] = ranges[i].Status == RangeStatus.RealTime
+                    ? Math.Max(0, realTimeEnd - ranges[i].Range.BaseIdBegin)
+                    : RangeSize(ranges[i]);
                 total += sizes[i];
             }
 

@@ -86,6 +86,7 @@
         feature) instead of a monospaced font, so the text stays Segoe UI. Fonts without the feature are unaffected.
     -->
     <Style x:Key="CellText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeFieldValue}" />
         <Setter Property="Margin" Value="8,0" />
         <Setter Property="VerticalAlignment" Value="Center" />
         <Setter Property="Typography.NumeralAlignment" Value="Tabular" />
