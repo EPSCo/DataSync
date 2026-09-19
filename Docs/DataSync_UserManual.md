@@ -75,7 +75,7 @@ The files are bound to the machine's CPU. If they were created for another machi
 - **Real-time data**: copies new remote rows as they appear. It shows the last copied record and its time.
 - **Historical data**: back-fills older records missing locally, newest first. *Pause/Resume sync task* stops
   and restarts it. The real-time task keeps running.
-- **Sync table** tab: the record ranges and their state. *Count* is the records in the range, *Share* its
+- **Sync table** tab: the record ranges and their state. *Count* is the records in the range, *Total (%)* its
   part of all rows shown. The *Sync* switch skips a range (off) or syncs it (on); it is dimmed for *Real-time*
   and *Synced* rows, which always show it checked. *Syncing* rows are yellow, the *Real-time* row is green,
   and switched-off (*Skipped*) rows show no progress until switched back on.
