@@ -387,19 +387,23 @@ namespace DataSync.ViewModels
                 }
 
                 // Queued and syncing ranges are copied backwards from StartSyncPoint; their BaseIdEnd is the progress.
+                // Skipped ranges show no progress even if they were partly copied before being switched off.
                 var hasStart = !isRealTime && range.StartSyncPoint > 0;
-                var inProgress = range.Status == RangeStatus.Syncing ||
-                                 (hasStart && range.Status == RangeStatus.NotSync && range.Range.BaseIdEnd != range.StartSyncPoint);
+                var isSkipped = !isRealTime && !range.SyncEnabled &&
+                                (range.Status == RangeStatus.NotSync || range.Status == RangeStatus.Syncing);
+                var inProgress = !isSkipped && (range.Status == RangeStatus.Syncing ||
+                                 (hasStart && range.Status == RangeStatus.NotSync && range.Range.BaseIdEnd != range.StartSyncPoint));
 
                 var row = Ranges[i];
                 row.BaseIdBegin = range.Range.BaseIdBegin;
                 row.BaseIdEnd = isRealTime ? "—" : FormatRecord(hasStart ? range.StartSyncPoint : range.Range.BaseIdEnd);
                 row.CurrentRecord = isRealTime ? FormatRecord(realTimeEnd) : inProgress ? FormatRecord(range.Range.BaseIdEnd) : "—";
-                row.Count = isRealTime ? "—" : FormatRecord(sizes[i]);
-                row.Share = isRealTime ? "—" : DescribeShare(sizes[i], total);
+                row.Count = FormatRecord(sizes[i]);
+                row.Share = DescribeShare(sizes[i], total);
                 row.Percent = isRealTime ? string.Join(" ", Enumerable.Repeat(".", _dotFrame + 1)) : DescribePercent(range, hasStart);
-                row.Status = DescribeStatus(range.Status);
-                // Toggles only switch NotSync/Syncing ranges; Real-time and Synced rows are dimmed (disabled).
+                row.Status = DescribeStatus(range);
+                // Synced and Real-time rows keep a checked but dimmed switch: an unchecked box must always
+                // mean "switched off, pending", never a finished row.
                 var canToggle = range.Status == RangeStatus.NotSync || range.Status == RangeStatus.Syncing;
                 row.SyncToggleEnabled = canToggle;
                 if (canToggle && _togglingBegin == range.Range.BaseIdBegin &&
@@ -410,7 +414,7 @@ namespace DataSync.ViewModels
                 }
                 else
                 {
-                    row.SyncEnabled = canToggle && range.SyncEnabled;
+                    row.SyncEnabled = !canToggle || range.SyncEnabled;
                     if (_togglingBegin == range.Range.BaseIdBegin)
                     {
                         _togglingBegin = long.MinValue; // confirmed by the engine (or row changed state)
@@ -476,6 +480,11 @@ namespace DataSync.ViewModels
             {
                 return "Completed";
             }
+            // Skipped ranges are never copied, so they show no progress even if they were partly copied before.
+            if (!range.SyncEnabled)
+            {
+                return "—";
+            }
             // Only the range being copied shows progress; queued ranges show "—".
             if (range.Status != RangeStatus.Syncing || !hasStart)
             {
@@ -496,16 +505,20 @@ namespace DataSync.ViewModels
         }
 
         /// <summary>Status text for the Sync Table; the row colours in MainWindow.xaml match on these words.</summary>
-        private static string DescribeStatus(RangeStatus status)
+        private static string DescribeStatus(SyncRange range)
         {
-            switch (status)
+            if (!range.SyncEnabled && (range.Status == RangeStatus.NotSync || range.Status == RangeStatus.Syncing))
+            {
+                return "Skipped";
+            }
+            switch (range.Status)
             {
                 case RangeStatus.RealTime:
                     return "Real-time";
                 case RangeStatus.NotSync:
                     return "Queued";
                 default:
-                    return status.ToString();
+                    return range.Status.ToString();
             }
         }
 

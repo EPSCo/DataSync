@@ -234,6 +234,20 @@ namespace DataSync.Core.Replication
                 }
 
                 syncing = _ranges[_syncingIndex];
+                if (!syncing.SyncEnabled)
+                {
+                    // Switched off while it was syncing: park it as pending until switched back on.
+                    syncing.Status = RangeStatus.NotSync;
+                    SelectNextRange();
+                    if (_syncingIndex < 0)
+                    {
+                        State = TaskState.NoOldData;
+                        _recheckGaps = true;
+                        return Settings.GapCheckInterval;
+                    }
+
+                    syncing = _ranges[_syncingIndex];
+                }
                 windowEnd = _nextBaseId;
                 // A toggle may have switched ranges after the cursor was set; never read above the new range.
                 if (windowEnd > syncing.Range.BaseIdEnd)
@@ -286,6 +300,25 @@ namespace DataSync.Core.Replication
                 if (syncing.Status != RangeStatus.Syncing && syncing.Status != RangeStatus.NotSync)
                 {
                     // The range finished while the read was in flight (e.g. a refresh merged it); nothing to advance.
+                    return OnSuccess(rows.Count, false, Settings.SyncUpdateInterval, stopwatch.Elapsed);
+                }
+                if (!syncing.SyncEnabled)
+                {
+                    // Switched off while the read was in flight: keep the saved rows but leave the range pending.
+                    syncing.Status = RangeStatus.NotSync;
+                    if (windowBegin <= syncing.Range.BaseIdBegin)
+                    {
+                        syncing.Range.BaseIdEnd = syncing.StartSyncPoint;
+                    }
+                    else
+                    {
+                        syncing.Range.BaseIdEnd = windowBegin - 1;
+                    }
+                    ReassertSyncing();
+                    if (_syncingIndex < 0)
+                    {
+                        _nextBaseId = -1;
+                    }
                     return OnSuccess(rows.Count, false, Settings.SyncUpdateInterval, stopwatch.Elapsed);
                 }
 
@@ -423,6 +456,12 @@ namespace DataSync.Core.Replication
         private void SelectNextRange()
         {
             var index = _ranges.FindIndex(r => r.Status == RangeStatus.Syncing);
+            if (index >= 0 && !_ranges[index].SyncEnabled)
+            {
+                // Switched off while it was syncing: park it as pending until switched back on.
+                _ranges[index].Status = RangeStatus.NotSync;
+                index = -1;
+            }
             if (index >= 0)
             {
                 _syncingIndex = index;
@@ -490,7 +529,8 @@ namespace DataSync.Core.Replication
             {
                 foreach (var range in _ranges)
                 {
-                    if (range.Status == RangeStatus.NotSync || range.Status == RangeStatus.Syncing)
+                    // Switched-off ranges are pending, not left to copy: they are never picked up until switched on.
+                    if ((range.Status == RangeStatus.NotSync || range.Status == RangeStatus.Syncing) && range.SyncEnabled)
                     {
                         count++;
                         remaining += range.Range.BaseIdEnd - range.Range.BaseIdBegin + 1;
